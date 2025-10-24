@@ -1,9 +1,7 @@
 import React from 'react'
-export default function  Home() {
-    return (
-        <div>   
-            Home Page
-        </div>
-    )
+import { Navigate } from 'react-router-dom'
+
+export default function Home() {
+    return <Navigate to="/overview" replace />
 }
  
