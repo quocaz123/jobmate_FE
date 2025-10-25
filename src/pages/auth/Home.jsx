@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Star, Clock, MapPin, Search, Filter, Zap } from "lucide-react";
 import JobCard from "../../components/JobCard";
