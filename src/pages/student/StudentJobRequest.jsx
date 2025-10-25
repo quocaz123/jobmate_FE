@@ -248,7 +248,7 @@ export default function StudentJobRequest() {
         
           <aside className="space-y-4">
             <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4">
-              <h3 className="text-md font-medium text-indigo-700 mb-2">Gợi ý AI</h3>
+              <h3 className="text-md font-medium text-indigo-700 mb-2">Gợi ý</h3>
               <div className="space-y-3">
                 {suggestedJobs.map((j) => (
                   <div
@@ -288,7 +288,7 @@ export default function StudentJobRequest() {
 
             <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 text-center text-sm text-gray-500">
               <Activity size={18} className="mx-auto mb-2 text-indigo-400" />
-              AI gợi ý dựa trên kỹ năng và loại công việc bạn chọn.
+              Gợi ý dựa trên kỹ năng và loại công việc bạn chọn.
             </div>
           </aside>
         </div>
