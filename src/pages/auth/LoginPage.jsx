@@ -1,15 +1,28 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { OAuthConfig } from "../../configurations/configuration";
+import { login } from "../../services/authService";
+import { handleAuthSuccess } from "../../services/authHandler";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login submitted:", { email, password });
+    try {
+      const res = await login(email, password);
+      console.log("login response:", res);
+      const token = res?.data.data?.token;
+      handleAuthSuccess(token, navigate);
+    } catch (error) {
+      console.error("Đăng nhập thất bại:", error);
+      alert("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+      return;
+    }
   };
 
   const handleGoogleLogin = () => {

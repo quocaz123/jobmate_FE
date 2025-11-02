@@ -1,25 +1,14 @@
-
-import React from 'react'
+import React from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import LoginPage from "../pages/auth/LoginPage";
-import Authenticate from '../pages/auth/Authenticate';
-import Home from '../pages/auth/Home';
-import SignupPage from '../pages/auth/SignUp';
-import MainLayout from '../layouts/MainLayout';
-import Overview from '../pages/Overview';
-import JobPostings from '../pages/JobPostings';
-import FindStudents from '../pages/FindStudents';
-import ApplicantsPage from '../pages/ApplicantsPage';
-import MessagesPage from '../pages/MessagesPage';
-import Statistics from '../pages/Statistics';
-import CompanyProfile from '../pages/CompanyProfile';
-import StudentDashboard from "../pages/student/StudentDashboard";
-import StudentJobList from "../pages/student/StudentJobList";
-import StudentJobRequest from "../pages/student/StudentJobRequest";
-import StudentApplications from "../pages/student/StudentApplications";
-import StudentProfile from "../pages/student/StudentProfile";
-import StudentJobDetail from "../pages/student/StudentJobDetail";
-import StudentApplicationDetail from "../pages/student/StudentApplicationDetail";
+import Authenticate from "../pages/auth/Authenticate";
+import SignupPage from "../pages/auth/SignUp";
+import MockLogin from "../pages/auth/MockLogin";
+import ProtectRoute from "./ProtectedRoute";
+import Unauthorized from "../pages/auth/Unauthorized";
+import UserPage from "../pages/UserPage";
+import EmployerPage from "../pages/EmployerPage";
+import AdminPage from "../pages/AdminPage";
 
 const AppRoutes = () => {
     return (
@@ -28,35 +17,32 @@ const AppRoutes = () => {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/authenticate" element={<Authenticate />} />
-                <Route path="/dashboard" element={<Navigate to="/overview" replace />} />
-                <Route path="/overview" element={<Overview />} />
-                <Route path="/job-postings" element={<JobPostings />} />
-                <Route path="/find-students" element={<FindStudents />} />
-                <Route path="/applicants" element={<ApplicantsPage />} />
-                <Route path="/messages" element={<MessagesPage />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/company-profile" element={<CompanyProfile />} />
+                <Route path="/mock-login" element={<MockLogin />} />
+                <Route path="/unauthorized" element={<Unauthorized />} />
 
-                <Route path="/student/dashboard" element={<StudentDashboard />} />
-                <Route path="/student/joblist" element={<StudentJobList />} />
-                <Route path="/student/jobrequest" element={<StudentJobRequest />} />
-                <Route path="/student/applications" element={<StudentApplications />} />
-                <Route path="/student/profile" element={<StudentProfile />} />
-                <Route path="/student/job/:id" element={<StudentJobDetail />} />
-                <Route path="/student/application/:id" element={<StudentApplicationDetail />} />
+                {/* User Routes */}
+                <Route element={<ProtectRoute allowedRoles={["ROLE_USER", "ROLE_ADMIN", "ROLE_EMPLOYER"]} />}>
+                    <Route path="/user" element={<UserPage />} />
+                </Route>
 
-                {/* Các trang có Header và Footer */}
-                <Route
-                    path="/"
-                    element={
-                        <MainLayout>
-                            <Home />
-                        </MainLayout>
-                    }
-                />
+                {/* Employer Routes */}
+                <Route element={<ProtectRoute allowedRoles={["ROLE_EMPLOYER", "ROLE_ADMIN"]} />}>
+                    <Route path="/employer" element={<EmployerPage />} />
+                </Route>
+
+                {/* Admin Routes */}
+                <Route element={<ProtectRoute allowedRoles={["ROLE_ADMIN"]} />}>
+                    <Route path="/admin" element={<AdminPage />} />
+                </Route>
+
+                {/* REDIRECT DEFAULT */}
+                <Route path="/" element={<Navigate to="/user" replace />} />
+                <Route path="/home" element={<Navigate to="/user" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/user" replace />} />
+                <Route path="*" element={<Navigate to="/user" replace />} />
             </Routes>
         </Router>
-    )
-}
+    );
+};
 
-export default AppRoutes
+export default AppRoutes;

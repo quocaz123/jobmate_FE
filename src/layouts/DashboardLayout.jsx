@@ -1,0 +1,80 @@
+import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Common/Sidebar';
+import TopBar from '../components/Common/TopBar';
+import { getUserInfo } from '../utils/userUtils';
+import { getMenuItemsByRole } from '../utils/menuConfig';
+
+const DashboardLayout = ({
+    children,
+    activeTab = 'overview',
+    onTabChange,
+    menuItems, // Menu items được truyền từ page
+    logo = "/vite.svg",
+    logoText = "JobMate"
+}) => {
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [userInfo, setUserInfo] = useState(null);
+    const [internalMenuItems, setInternalMenuItems] = useState([]);
+
+    useEffect(() => {
+        const userInfo = getUserInfo();
+        if (userInfo) {
+            setUserInfo(userInfo);
+        }
+    }, []);
+
+    // Nếu menuItems được truyền từ props thì dùng, nếu không thì tự động lấy theo role (backward compatibility)
+    useEffect(() => {
+        if (menuItems && menuItems.length > 0) {
+            setInternalMenuItems(menuItems);
+        } else {
+            // Fallback: tự động lấy menu theo role nếu không truyền menuItems
+            const userInfo = getUserInfo();
+            const role = userInfo?.role || 'Student';
+            const items = getMenuItemsByRole(role);
+            setInternalMenuItems(items);
+        }
+    }, [menuItems]);
+
+    // Nếu chưa load menuItems, hiển thị loading
+    if (internalMenuItems.length === 0) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600">Đang tải...</p>
+                </div>
+            </div>
+        );
+    }
+
+    const handleTabChange = (tabId) => {
+        if (onTabChange) {
+            onTabChange(tabId);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 flex">
+            <Sidebar
+                sidebarItems={internalMenuItems}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                logo={logo}
+                logoText={logoText}
+            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <TopBar
+                    inFor={userInfo?.fullName || ''}
+                    role={userInfo?.role || 'Student'}
+                />
+                <div className="flex-1 overflow-y-auto p-6">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default DashboardLayout;
