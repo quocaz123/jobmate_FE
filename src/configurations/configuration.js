@@ -5,7 +5,7 @@ export const OAuthConfig = {
 }
 
 export const CONFIG = {
-    API_GATEWAY : "http://localhost:8888/api/v1",
+    API_GATEWAY: "http://localhost:8888/api/v1",
 };
 
 export const AUTH = {
@@ -17,3 +17,57 @@ export const AUTH = {
     RESEND_OTP: "/jobmate/auth/resend-otp",
     SET_PASSWORD: "/jobmate/auth/set-password",
 };
+
+export const USER = {
+    GET_USER_INFO: "/jobmate/users/my-info",
+    GET_ALL_USERS: "/jobmate/users/",
+    UPDATE_USER: "/jobmate/users",
+    GET_USER_DETAIL: (userId) => `/jobmate/users/${userId}`,
+    GET_USER_TOPRATED: "/jobmate/users/top-rated",
+    GET_USER_TOP10: "/jobmate/users/top-10",
+};
+
+export const NOTIFICATION = {
+    GET_NOTIFICATIONS: "/jobmate/notifications/me",
+    MARK_AS_READ: (id) => `/jobmate/notifications/${id}/read`,
+    CREATE_NOTIFICATION: "/jobmate/notifications",
+};
+
+export const JOB = {
+    CREATE_JOB: "/jobmate/jobs",
+    UPDATE_JOB: (jobId) => `/jobmate/jobs/${jobId}`,
+    VERIFY_JOB: (jobId) => `/jobmate/jobs/${jobId}/verify-job`,
+    GET_JOBS: "/jobmate/jobs",
+    GET_JOB_DETAIL: (jobId) => `/jobmate/jobs/${jobId}`,
+    GET_NEARBY_JOBS: "/jobmate/jobs/nearby",
+    GET_MY_JOBS: "/jobmate/jobs/my-jobs",
+    GET_AVAILABLE_JOBS: "/jobmate/jobs/available",
+}
+
+export const APPLICATION = {
+    APPLY_JOB: "/jobmate/applications/apply",
+    GET_MY_APPLICATIONS: "/jobmate/applications/my-applications",
+    GET_JOB_OF_APPLICATION: (jobId) => `/jobmate/applications/job/${jobId}`,
+}
+
+export const VERIFY = {
+    VERIFY_CCCD: "/jobmate/verify/request"
+}
+
+export const UPLOAD = {
+    UPLOAD_FILE: "/jobmate/upload/file",
+}
+
+export const ADMIN = {
+    REJECT_CCCD: (userId) => `/jobmate/admin/verify/${userId}/reject`,
+    APPROVE_CCCD: (userId) => `/jobmate/admin/verify/${userId}/approve`,
+    GET_ALL_VERIFY_REQUESTS: "/jobmate/admin/verify/pedding",
+    GET_VERIFY_DETAIL: (userId) => `/jobmate/admin/verify/pedding/${userId}/detail`,
+}
+
+export const CHAT = {
+    GET_MY_CONVERSATIONS: "/chat/conversations/my-conversations",
+    GET_MESSAGES_OF_CONVERSATION: "/chat/messages",
+    CREATE_MESSAGE: "/chat/messages/create",
+    CREATE_VERSATION: "/chat/conversations/create",
+}

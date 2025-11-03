@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import DashboardLayout from '../layouts/DashboardLayout';
-import { getUserInfo } from '../utils/userUtils';
-import { userMenuItems } from '../utils/menuConfig';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { getUserInfo } from '../../utils/userUtils';
+import { userMenuItems } from '../../utils/menuConfig';
+import FindJob from '../../components/User/FindJob';
+import MessagesPage from '../Common/MessagePage';
 
 // Component cho Overview
 const UserOverview = () => {
@@ -96,12 +98,7 @@ const UserPage = () => {
             case 'overview':
                 return <UserOverview />;
             case 'find-jobs':
-                return (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-2xl font-bold mb-4">Tìm việc làm</h2>
-                        <p className="text-gray-600">Tìm kiếm công việc phù hợp với bạn...</p>
-                    </div>
-                );
+                return <FindJob />;
             case 'job-requests':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">
@@ -117,12 +114,7 @@ const UserPage = () => {
                     </div>
                 );
             case 'messages':
-                return (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-2xl font-bold mb-4">Tin nhắn</h2>
-                        <p className="text-gray-600">Quản lý tin nhắn với nhà tuyển dụng...</p>
-                    </div>
-                );
+                return  <MessagesPage />;
             case 'schedule':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import DashboardLayout from '../layouts/DashboardLayout';
-import { getUserInfo } from '../utils/userUtils';
-import { adminMenuItems } from '../utils/menuConfig';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { getUserInfo } from '../../utils/userUtils';
+import { adminMenuItems } from '../../utils/menuConfig';
+import ManagerUser from '../../components/Admin/ManagerUser';
 
 // Component cho Overview
 const AdminOverview = () => {
@@ -96,12 +97,7 @@ const AdminPage = () => {
             case 'overview':
                 return <AdminOverview />;
             case 'users':
-                return (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-2xl font-bold mb-4">Quản lý người dùng</h2>
-                        <p className="text-gray-600">Quản lý danh sách người dùng trong hệ thống...</p>
-                    </div>
-                );
+                return <ManagerUser />;
             case 'employers':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">
