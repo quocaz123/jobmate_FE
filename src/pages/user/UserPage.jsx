@@ -3,8 +3,6 @@ import DashboardLayout from '../../layouts/DashboardLayout';
 import FindJob from '../../components/User/FindJob';
 import MessagesPage from '../Common/MessagePage';
 import PasswordSetupModal from '../../components/Common/PasswordSetupModal';
-import React, { useState } from 'react';
-import DashboardLayout from '../../layouts/DashboardLayout';
 import { getUserInfo } from '../../utils/userUtils';
 import { userMenuItems } from '../../utils/menuConfig';
 import Dashboard from './Dashboard';

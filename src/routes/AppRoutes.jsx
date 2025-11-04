@@ -10,6 +10,7 @@ import Unauthorized from "../pages/auth/Unauthorized";
 import UserPage from "../pages/user/UserPage";
 import EmployerPage from "../pages/employer/EmployerPage";
 import AdminPage from "../pages/admin/AdminPage";
+import Overview from "../pages/Common/Overview";
 
 const AppRoutes = () => {
     return (
@@ -21,10 +22,11 @@ const AppRoutes = () => {
                 <Route path="/mock-login" element={<MockLogin />} />
                 <Route path="/set-password" element={<SetPasswordPage />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
+                <Route path="/overview" element={<Overview />} />
 
                 {/* User Routes */}
                 <Route element={<ProtectRoute allowedRoles={["ROLE_USER", "ROLE_ADMIN", "ROLE_EMPLOYER"]} />}>
-                    <Route path="/user" element={<UserPage />} />
+                    <Route path="/home" element={<UserPage />} />
                 </Route>
 
                 {/* Employer Routes */}
