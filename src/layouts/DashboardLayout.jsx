@@ -54,7 +54,7 @@ const DashboardLayout = ({
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="h-screen bg-gray-50 flex overflow-hidden">
             <Sidebar
                 sidebarItems={internalMenuItems}
                 activeTab={activeTab}
@@ -69,7 +69,7 @@ const DashboardLayout = ({
                     inFor={userInfo?.fullName || ''}
                     role={userInfo?.role || 'Student'}
                 />
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
                     {children}
                 </div>
             </div>

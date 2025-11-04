@@ -3,7 +3,7 @@ import { ChevronLeft, LayoutDashboard, Briefcase, ClipboardList, Send, MessageSq
 
 const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSidebarOpen, logo, logoText }) => {
     return (
-        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-sm border-r border-gray-200 transition-all duration-300 flex flex-col h-screen`}>
+        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-sm border-r border-gray-200 transition-all duration-300 flex flex-col h-full`}>
             {/* Header */}
             <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -50,7 +50,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
             </div>
 
             {/* Main Navigation */}
-            <nav className="flex-1 px-3 py-4 overflow-y-auto">
+<nav className="flex-1 px-3 py-4 overflow-y-auto">
                 <ul className="space-y-1">
                     {sidebarItems.map((item) => {
                         const Icon = item.icon;
@@ -107,5 +107,4 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
         </div>
     );
 };
-
-export default Sidebar; 
+export default Sidebar;
