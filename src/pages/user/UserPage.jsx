@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { getUserInfo } from '../../utils/userUtils';
 import { userMenuItems } from '../../utils/menuConfig';
 import FindJob from '../../components/User/FindJob';
 import MessagesPage from '../Common/MessagePage';
+import PasswordSetupModal from '../../components/Common/PasswordSetupModal';
 
 // Component cho Overview
 const UserOverview = () => {
@@ -92,6 +93,36 @@ const UserOverview = () => {
 
 const UserPage = () => {
     const [activeTab, setActiveTab] = useState('overview');
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [userInfo, setUserInfo] = useState(null);
+
+    useEffect(() => {
+        // Kiểm tra xem có authResponse từ OAuth login không
+        const authResponseStr = localStorage.getItem('authResponse');
+        if (authResponseStr) {
+            try {
+                const authResponse = JSON.parse(authResponseStr);
+
+                // Check nếu cần setup password
+                if (authResponse.requiresPasswordSetup) {
+                    setUserInfo({
+                        email: authResponse.userEmail,
+                        name: authResponse.userName
+                    });
+                    setShowPasswordModal(true);
+                }
+
+                // Xóa authResponse sau khi đã xử lý (chỉ hiện 1 lần)
+                localStorage.removeItem('authResponse');
+            } catch (error) {
+                console.error('Error parsing authResponse:', error);
+            }
+        }
+    }, []);
+
+    const handleClosePasswordModal = () => {
+        setShowPasswordModal(false);
+    };
 
     const renderContent = () => {
         switch (activeTab) {
@@ -114,7 +145,7 @@ const UserPage = () => {
                     </div>
                 );
             case 'messages':
-                return  <MessagesPage />;
+                return <MessagesPage />;
             case 'schedule':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">
@@ -147,15 +178,25 @@ const UserPage = () => {
     };
 
     return (
-        <DashboardLayout
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            menuItems={userMenuItems}
-            logo="/vite.svg"
-            logoText="JobMate"
-        >
-            {renderContent()}
-        </DashboardLayout>
+        <>
+            <DashboardLayout
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                menuItems={userMenuItems}
+                logo="/vite.svg"
+                logoText="JobMate"
+            >
+                {renderContent()}
+            </DashboardLayout>
+
+            {/* Password Setup Modal */}
+            <PasswordSetupModal
+                isOpen={showPasswordModal}
+                onClose={handleClosePasswordModal}
+                userEmail={userInfo?.email}
+                userName={userInfo?.name}
+            />
+        </>
     );
 };
 

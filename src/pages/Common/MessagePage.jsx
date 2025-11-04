@@ -101,7 +101,11 @@ const ChatWindow = ({ conversation = { name: 'Tin nhắn', avatar: 'M' }, socket
           ...message,
           createdDate: message.createdDate || message.createDate || new Date().toISOString(),
         }
-        setMessages((prev) => [...prev, normalized])
+        setMessages((prev) => {
+          // Deduplicate by id to tránh hiển thị 2 lần (API append + socket broadcast)
+          if (prev.some((m) => m.id === normalized.id)) return prev
+          return [...prev, normalized]
+        })
       }
     })
 
@@ -151,8 +155,11 @@ const ChatWindow = ({ conversation = { name: 'Tin nhắn', avatar: 'M' }, socket
           createdDate: apiMsg.createdDate || apiMsg.createDate || new Date().toISOString(),
           me: true,
         }
-        // Remove temp by id and append server message
-        setMessages((prev) => prev.filter((m) => m.id !== tempId).concat(normalized))
+        // Replace temp by server message and ensure only ONE instance by id
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => m.id !== tempId && m.id !== normalized.id)
+          return filtered.concat(normalized)
+        })
       }
     } catch (err) {
       console.error("❌ Lỗi gửi tin nhắn:", err)

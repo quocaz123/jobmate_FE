@@ -2,7 +2,7 @@ import { setToken } from "./localStorageService";
 import { scheduleTokenRefresh } from "./tokenService";
 import { jwtDecode } from "jwt-decode";
 
-export const handleAuthSuccess = (token, navigate) => {
+export const handleAuthSuccess = (token, navigate, shouldNavigate = true) => {
     if (!token) {
         alert("Không nhận được token!");
         return;
@@ -10,6 +10,10 @@ export const handleAuthSuccess = (token, navigate) => {
 
     setToken(token);
     scheduleTokenRefresh();
+
+    if (!shouldNavigate) {
+        return; // Don't navigate, let caller handle it
+    }
 
     const decoded = jwtDecode(token);
     const roles = decoded.scope?.split(" ") || [];
