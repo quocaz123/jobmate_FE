@@ -23,3 +23,7 @@ export const createMessage = async (data) => {
     });
 }
 
+export const searchConversations = async (keyword) => {
+  return await httpClient.get(`${CHAT.SEARCH_CONVERSATIONS}?keyword=${encodeURIComponent(keyword)}`);
+};
+

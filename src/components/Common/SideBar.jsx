@@ -21,7 +21,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
                             </div>
                         ) : (
                             <div className="flex items-center space-x-3">
-                                <div className="bg-teal-500 p-2 rounded-lg flex-shrink-0">
+                                <div className="bg-gradient-to-r from-indigo-500 to-blue-600 p-2 rounded-lg flex-shrink-0">
                                     <div className="h-5 w-5 bg-white rounded"></div>
                                 </div>
                                 {sidebarOpen && logoText && (
@@ -33,7 +33,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
                     {sidebarOpen && (
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center hover:bg-teal-600 transition-colors"
+                            className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-full flex items-center justify-center hover:from-indigo-600 hover:to-blue-700 transition-all"
                         >
                             <ChevronLeft className="h-4 w-4 text-white" />
                         </button>
@@ -41,7 +41,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
                     {!sidebarOpen && (
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center hover:bg-teal-600 transition-colors"
+                            className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-full flex items-center justify-center hover:from-indigo-600 hover:to-blue-700 transition-all"
                         >
                             <ChevronLeft className="h-4 w-4 text-white rotate-180" />
                         </button>
@@ -59,9 +59,9 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
                             <li key={item.id}>
                                 <button
                                     onClick={() => setActiveTab(item.id)}
-                                    className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-colors ${isActive
-                                        ? 'bg-teal-500 text-white'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all ${isActive
+                                        ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md'
+                                        : 'text-gray-700 hover:bg-blue-50'
                                         }`}
                                 >
                                     <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-600'}`} />
@@ -81,14 +81,14 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
             <div className="border-t border-gray-200 px-3 py-4 space-y-1">
                 <button
                     onClick={() => setActiveTab('home-page')}
-                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-blue-50 transition-colors"
                 >
                     <Home className="h-5 w-5 text-gray-600" />
                     {sidebarOpen && <span className="text-sm font-medium">Về trang chủ</span>}
                 </button>
                 <button
                     onClick={() => setActiveTab('settings')}
-                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-blue-50 transition-colors"
                 >
                     <Settings className="h-5 w-5 text-gray-600" />
                     {sidebarOpen && <span className="text-sm font-medium">Cài đặt</span>}

@@ -68,11 +68,11 @@ function companyInitials(name) {
 }
 
 const COLORS = [
-  "bg-gradient-to-br from-pink-50 to-pink-100",
-  "bg-gradient-to-br from-cyan-50 to-cyan-100",
-  "bg-gradient-to-br from-amber-50 to-amber-100",
+  "bg-gradient-to-br from-blue-50 to-indigo-100",
+  "bg-gradient-to-br from-indigo-50 to-blue-100",
+  "bg-gradient-to-br from-purple-50 to-blue-100",
   "bg-gradient-to-br from-green-50 to-green-100",
-  "bg-gradient-to-br from-indigo-50 to-indigo-100",
+  "bg-gradient-to-br from-blue-50 to-purple-100",
 ];
 function pickColor(name) {
   let h = 0;
@@ -84,8 +84,8 @@ function tagClass(tag) {
   const t = tag.toLowerCase();
   if (t.includes("gấp")) return "bg-red-100 text-red-600 border-red-200";
   if (t.includes("đã xác minh")) return "bg-green-100 text-green-600 border-green-200";
-  if (t.includes("freelance")) return "bg-pink-100 text-pink-600 border-pink-200";
-  if (t.includes("part")) return "bg-cyan-100 text-cyan-800 border-cyan-200";
+  if (t.includes("freelance")) return "bg-purple-100 text-purple-600 border-purple-200";
+  if (t.includes("part")) return "bg-blue-100 text-blue-800 border-blue-200";
   return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
@@ -243,7 +243,7 @@ export default function JobList() {
                     </button>
                     <button
                       onClick={() => handleApply(job.title)}
-                      className="px-4 py-2 rounded-lg text-white text-sm bg-gradient-to-r from-pink-500 to-cyan-500 hover:opacity-95"
+                      className="px-4 py-2 rounded-lg text-white text-sm bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all"
                     >
                       Ứng tuyển
                     </button>

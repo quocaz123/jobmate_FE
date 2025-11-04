@@ -85,14 +85,14 @@ export default function Dashboard() {
         {/* ----- THỐNG KÊ ----- */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="p-6 bg-white border rounded-lg flex gap-2 items-center shadow-sm">
-            <Briefcase className="text-cyan-600" />
+            <Briefcase className="text-blue-600" />
             <div>
               <p className="text-2xl font-bold">{totalApplications}</p>
               <p className="text-sm text-gray-500">Đã ứng tuyển</p>
             </div>
           </div>
           <div className="p-6 bg-white border rounded-lg flex gap-2 items-center shadow-sm">
-            <MessageSquare className="text-pink-600" />
+            <MessageSquare className="text-indigo-600" />
             <div>
               <p className="text-2xl font-bold">{interviewCount}</p>
               <p className="text-sm text-gray-500">Phỏng vấn</p>
@@ -179,7 +179,7 @@ export default function Dashboard() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
             <div
-              className="bg-black h-2 rounded-full"
+              className="bg-gradient-to-r from-indigo-500 to-blue-600 h-2 rounded-full"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
@@ -198,7 +198,7 @@ export default function Dashboard() {
 
           <button
             onClick={toggleCertificate}
-            className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700"
+            className="mt-4 px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded hover:from-indigo-600 hover:to-blue-700 transition-all"
           >
             Cập nhật chứng chỉ
           </button>

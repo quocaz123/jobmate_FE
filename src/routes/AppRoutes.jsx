@@ -22,7 +22,7 @@ const AppRoutes = () => {
                 <Route path="/mock-login" element={<MockLogin />} />
                 <Route path="/set-password" element={<SetPasswordPage />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
-                <Route path="/overview" element={<Overview />} />
+                <Route path="/" element={<Overview />} />
 
                 {/* User Routes */}
                 <Route element={<ProtectRoute allowedRoles={["ROLE_USER", "ROLE_ADMIN", "ROLE_EMPLOYER"]} />}>
@@ -40,7 +40,7 @@ const AppRoutes = () => {
                 </Route>
 
                 {/* REDIRECT DEFAULT */}
-                <Route path="/" element={<Navigate to="/user" replace />} />
+                {/* <Route path="/" element={<Navigate to="/user" replace />} /> */}
                 <Route path="/home" element={<Navigate to="/user" replace />} />
                 <Route path="/dashboard" element={<Navigate to="/user" replace />} />
                 <Route path="*" element={<Navigate to="/user" replace />} />

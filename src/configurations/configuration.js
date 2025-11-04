@@ -70,4 +70,5 @@ export const CHAT = {
     GET_MESSAGES_OF_CONVERSATION: "/chat/messages",
     CREATE_MESSAGE: "/chat/messages/create",
     CREATE_VERSATION: "/chat/conversations/create",
+    SEARCH_CONVERSATIONS: "/chat/conversations/search",
 }
