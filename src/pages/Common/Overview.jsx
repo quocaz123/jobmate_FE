@@ -89,8 +89,6 @@ export default function Overview() {
   return (
     <div className="bg-gradient-to-b from-purple-50 via-white to-blue-50 min-h-screen">
       <Header />
-      {/* ================= HERO SECTION ================= */}
-      {/* ================= HERO SECTION ================= */}
       <section className="bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 text-white px-6 md:px-20 py-20 shadow-lg">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* LEFT */}
