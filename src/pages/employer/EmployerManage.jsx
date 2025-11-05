@@ -1,59 +1,78 @@
 import React, { useEffect, useState } from 'react'
-import { MapPin, DollarSign, Clock, Users, Eye, MoreVertical, Trash2, Edit, Search } from 'lucide-react'
+import { MapPin, DollarSign, Clock, Users, Eye, MoreVertical, Trash2, Edit, Search, Calendar } from 'lucide-react'
+import { get_my_Jobs } from '../../services/jobService'
+import Pagination from '../../components/Common/Pagination'
 
-const STORAGE_KEY = 'jobmate_posted_jobs'
-
-function loadJobs() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch (e) {
-    return []
+function statusStyle(status) {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return { label: 'Đang xem xét', badge: 'bg-yellow-50 text-yellow-700', border: 'border-l-4 border-yellow-300' }
+    case 'ACTIVE':
+    case 'APPROVED':
+      return { label: 'Đang hoạt động', badge: 'bg-green-50 text-green-700', border: 'border-l-4 border-green-300' }
+    case 'REJECTED':
+      return { label: 'Bị từ chối', badge: 'bg-red-50 text-red-700', border: 'border-l-4 border-red-300' }
+    case 'CLOSED':
+      return { label: 'Hết hạn', badge: 'bg-gray-50 text-gray-700', border: 'border-l-4 border-gray-300' }
+    case 'EXPIRED':
+      return { label: 'Hết hạn', badge: 'bg-gray-50 text-gray-700', border: 'border-l-4 border-gray-300' }
+    default:
+      return { label: 'Đang tuyển', badge: 'bg-gray-50 text-gray-700', border: 'border-l-4 border-gray-100' }
   }
 }
 
-function saveJobs(jobs) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs))
+const formatInstant = (isoUtc) => {
+  if (!isoUtc) return ''
+  try {
+    return new Date(isoUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false }).slice(0, 16)
+  } catch {
+    return String(isoUtc).replace('T', ' ').slice(0, 16)
+  }
 }
 
-function getStatusClasses(status) {
-  if (!status) return 'bg-gray-50 text-gray-700'
-  if (status.includes('Đang')) return 'bg-green-50 text-green-700'
-  if (status.includes('Chờ')) return 'bg-yellow-50 text-yellow-700'
-  if (status.includes('Hết')) return 'bg-red-50 text-red-700'
-  return 'bg-gray-50 text-gray-700'
-}
 
-function getStatusBorder(status) {
-  if (!status) return 'border-l-4 border-gray-100'
-  if (status.includes('Đang')) return 'border-l-4 border-green-300'
-  if (status.includes('Chờ')) return 'border-l-4 border-yellow-300'
-  if (status.includes('Hết')) return 'border-l-4 border-red-300'
-  return 'border-l-4 border-gray-100'
-}
-
-export default function EmployerManage() {
+export default function EmployerManage({ onView, onEdit }) {
   const [jobs, setJobs] = useState([])
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [message, setMessage] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const pageSize = 10
 
   useEffect(() => {
-    const existing = loadJobs()
-    if (!existing || existing.length === 0) {
-      // Seed demo data so the page shows the example UI you provided
-      const sample = [
-        { id: 'job-1', title: 'Nhân viên phục vụ', location: 'Quận 1, TP.HCM', salary: '25.000đ/giờ', type: 'Part-time', status: 'Đang hoạt động', applicants: new Array(24).fill({}), views: 156 },
-        { id: 'job-2', title: 'Nhân viên bán hàng', location: 'Quận 3, TP.HCM', salary: '30.000đ/giờ', type: 'Part-time', status: 'Đang hoạt động', applicants: new Array(18).fill({}), views: 98 },
-        { id: 'job-3', title: 'Gia sư Toán', location: 'Quận 7, TP.HCM', salary: '100.000đ/giờ', type: 'Freelance', status: 'Chờ duyệt', applicants: [], views: 0 },
-        { id: 'job-4', title: 'Nhân viên Marketing', location: 'Quận 2, TP.HCM', salary: '35.000đ/giờ', type: 'Part-time', status: 'Hết hạn', applicants: new Array(42).fill({}), views: 234 }
-      ]
-      setJobs(sample)
-      saveJobs(sample)
-    } else {
-      setJobs(existing)
+    const fetchJobs = async () => {
+      setLoading(true)
+      try {
+        const statusParam = filter === 'active' ? 'APPROVED' : filter === 'pending' ? 'PENDING_REVIEW' : filter === 'expired' ? 'CLOSED' : undefined
+        const res = await get_my_Jobs(page, pageSize, statusParam)
+        const payload = res?.data?.data
+        const list = payload?.data || []
+        const mapped = list.map((j) => ({
+          id: j.id,
+          title: j.title,
+          location: j.location,
+          salary: j.salary,
+          type: j.jobType,
+          status: j.status,
+          startAt: j.startAt,
+          createdAt: j.createdAt,
+          applicants: new Array(j.applicationCount || 0).fill({}),
+          views: j.viewsCount || 0,
+          salaryUnit: j.salaryUnit,
+        }))
+        setJobs(mapped)
+        if (typeof payload?.totalPages === 'number') setTotalPages(payload.totalPages)
+      } catch {
+        setMessage({ type: 'error', text: 'Không tải được danh sách tin tuyển dụng.' })
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [])
+
+    fetchJobs()
+  }, [page, filter])
 
   useEffect(() => {
     if (message) {
@@ -67,13 +86,11 @@ export default function EmployerManage() {
     if (!ok) return
     const next = jobs.filter(j => j.id !== id)
     setJobs(next)
-    saveJobs(next)
     setMessage({ type: 'success', text: 'Đã xóa tin tuyển dụng.' })
   }
 
   function handleEdit(id) {
-    // Lightweight placeholder: open EmployerPost via navigation or show modal in a real app
-    alert('Chức năng sửa chưa được cài đặt trong demo. Bạn có thể dùng form Đăng tin để thêm/cập nhật.')
+    if (onEdit) onEdit(id)
   }
 
   function filtered() {
@@ -113,10 +130,10 @@ export default function EmployerManage() {
 
         <div className="mb-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => setFilter('all')} className={`px-3 py-2 rounded-full text-sm ${filter === 'all' ? 'bg-white border' : 'bg-gray-50'}`}>Tất cả</button>
-            <button onClick={() => setFilter('active')} className={`px-3 py-2 rounded-full text-sm ${filter === 'active' ? 'bg-white border' : 'bg-gray-50'}`}>Đang hoạt động</button>
-            <button onClick={() => setFilter('pending')} className={`px-3 py-2 rounded-full text-sm ${filter === 'pending' ? 'bg-white border' : 'bg-gray-50'}`}>Chờ duyệt</button>
-            <button onClick={() => setFilter('expired')} className={`px-3 py-2 rounded-full text-sm ${filter === 'expired' ? 'bg-white border' : 'bg-gray-50'}`}>Hết hạn</button>
+            <button onClick={() => { setFilter('all'); setPage(0) }} className={`px-3 py-2 rounded-full text-sm ${filter === 'all' ? 'bg-white border' : 'bg-gray-50'}`}>Tất cả</button>
+            <button onClick={() => { setFilter('active'); setPage(0) }} className={`px-3 py-2 rounded-full text-sm ${filter === 'active' ? 'bg-white border' : 'bg-gray-50'}`}>Đang hoạt động</button>
+            <button onClick={() => { setFilter('pending'); setPage(0) }} className={`px-3 py-2 rounded-full text-sm ${filter === 'pending' ? 'bg-white border' : 'bg-gray-50'}`}>Chờ duyệt</button>
+            <button onClick={() => { setFilter('expired'); setPage(0) }} className={`px-3 py-2 rounded-full text-sm ${filter === 'expired' ? 'bg-white border' : 'bg-gray-50'}`}>Hết hạn</button>
           </div>
         </div>
 
@@ -127,41 +144,65 @@ export default function EmployerManage() {
         )}
 
         <div className="space-y-4">
-          {filtered().length === 0 && (
+          {loading && (
+            <div className="text-sm text-gray-500 py-8 text-center">Đang tải dữ liệu...</div>
+          )}
+          {!loading && filtered().length === 0 && (
             <div className="text-sm text-gray-500 py-8 text-center">Không có tin nào khớp.</div>
           )}
 
-          {filtered().map(job => (
-            <div key={job.id || job._id || job.title} className={`${getStatusBorder(job.status)} rounded-lg border border-gray-100 p-5 flex items-center justify-between hover:shadow-lg transform hover:-translate-y-0.5 transition`}>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-lg font-medium text-gray-800">{job.title || 'Tiêu đề công việc'}</h3>
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClasses(job.status)}`}>{job.status || 'Đang tuyển'}</div>
+          {filtered().map(job => {
+            const style = statusStyle(job.status)
+            return (
+              <div key={job.id || job._id || job.title} className={`${style.border} rounded-lg border border-gray-100 p-5 flex items-center justify-between hover:shadow-lg transform hover:-translate-y-0.5 transition`}>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-medium text-gray-800">{job.title || 'Tiêu đề công việc'}</h3>
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${style.badge}`}>{style.label}</div>
+                  </div>
+
+                  <div className="mt-3 text-sm text-gray-500 flex flex-wrap gap-6 items-center">
+                    <div className="flex items-center gap-2"><MapPin size={14} /> <span>{job.location || 'Địa điểm'}</span></div>
+                    <div className="flex items-center gap-2"><DollarSign size={14} /> <span>{
+                      typeof job.salary === 'number'
+                        ? `${job.salary.toLocaleString('vi-VN')}đ/${job.salaryUnit || 'buổi'}`
+                        : (job.salary || 'Mức lương')
+                    }</span></div>
+                    <div className="flex items-center gap-2"><Clock size={14} /> <span>{job.type || 'Part-time'}</span></div>
+                    {job.startAt && (
+                      <div className="flex items-center gap-2"><Calendar size={14} /> <span>{formatInstant(job.startAt)}</span></div>
+                    )}
+                    {job.createdAt && (
+                      <div className="flex items-center gap-2"><Calendar size={14} /> <span>Tạo: {formatInstant(job.createdAt)}</span></div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 text-sm text-gray-500 flex items-center gap-6">
+                    <div className="flex items-center gap-2"><Users size={14} /> <span>{(job.applicants && job.applicants.length) || 0} ứng viên</span></div>
+                    <div className="flex items-center gap-2"><Eye size={14} /> <span>{job.views || 0} lượt xem</span></div>
+                  </div>
                 </div>
 
-                <div className="mt-3 text-sm text-gray-500 flex flex-wrap gap-6 items-center">
-                  <div className="flex items-center gap-2"><MapPin size={14} /> <span>{job.location || 'Địa điểm'}</span></div>
-                  <div className="flex items-center gap-2"><DollarSign size={14} /> <span>{job.salary || 'Mức lương'}</span></div>
-                  <div className="flex items-center gap-2"><Clock size={14} /> <span>{job.type || 'Part-time'}</span></div>
-                </div>
-
-                <div className="mt-3 text-sm text-gray-500 flex items-center gap-6">
-                  <div className="flex items-center gap-2"><Users size={14} /> <span>{(job.applicants && job.applicants.length) || 0} ứng viên</span></div>
-                  <div className="flex items-center gap-2"><Eye size={14} /> <span>{job.views || 0} lượt xem</span></div>
+                <div className="ml-4 flex items-center gap-3">
+                  <button onClick={() => (onView ? onView(job.id) : alert('Xem chi tiết'))} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded bg-white text-sm"><Eye size={16} /> Xem</button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEdit(job.id)}
+                      disabled={job.status !== 'PENDING_REVIEW'}
+                      className={`p-2 rounded ${job.status !== 'PENDING_REVIEW' ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                      title={job.status !== 'PENDING_REVIEW' ? 'Chỉ có thể sửa khi đang chờ duyệt' : 'Sửa'}
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(job.id)} className="p-2 rounded hover:bg-gray-50 text-red-600" title="Xóa"><Trash2 size={16} /></button>
+                    <button className="p-2 rounded hover:bg-gray-50 text-gray-400" title="Thêm"><MoreVertical size={16} /></button>
+                  </div>
                 </div>
               </div>
-
-              <div className="ml-4 flex items-center gap-3">
-                <button onClick={() => alert('Xem chi tiết (demo)')} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded bg-white text-sm"><Eye size={16} /> Xem</button>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => handleEdit(job.id)} className="p-2 rounded hover:bg-gray-50" title="Sửa"><Edit size={16} /></button>
-                  <button onClick={() => handleDelete(job.id)} className="p-2 rounded hover:bg-gray-50 text-red-600" title="Xóa"><Trash2 size={16} /></button>
-                  <button className="p-2 rounded hover:bg-gray-50 text-gray-400" title="Thêm"><MoreVertical size={16} /></button>
-                </div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
+        <Pagination page={page} totalPages={totalPages} onChangePage={setPage} />
       </div>
     </div>
   )

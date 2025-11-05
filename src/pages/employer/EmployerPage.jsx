@@ -1,25 +1,32 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { getUserInfo } from '../../utils/userUtils';
+// import { getUserInfo } from '../../utils/userUtils';
 import { employerMenuItems } from '../../utils/menuConfig';
 import { EmployerDashboard } from './EmployerDashboard';
 import EmployerPost from './EmployerPost';
 import EmployerManage from './EmployerManage';
 import EmployerCandidates from './EmployerCandidates';
+import MessagesPage from '../Common/MessagePage';
 
 const EmployerPage = () => {
     const [activeTab, setActiveTab] = useState('overview');
+    const [editor, setEditor] = useState({ mode: 'create', jobId: null });
 
-    
+
 
     const renderContent = () => {
         switch (activeTab) {
             case 'overview':
                 return <EmployerDashboard />;
             case 'post-job':
-                return <EmployerPost />;
+                return <EmployerPost mode={editor.mode} jobId={editor.jobId} onDone={() => { setEditor({ mode: 'create', jobId: null }); setActiveTab('manage-jobs'); }} />;
             case 'manage-jobs':
-                return <EmployerManage />;
+                return (
+                    <EmployerManage
+                        onView={(jobId) => { setEditor({ mode: 'view', jobId }); setActiveTab('post-job'); }}
+                        onEdit={(jobId) => { setEditor({ mode: 'edit', jobId }); setActiveTab('post-job'); }}
+                    />
+                );
             case 'candidates':
                 return <EmployerCandidates />;
             case 'search-candidates':
@@ -30,12 +37,7 @@ const EmployerPage = () => {
                     </div>
                 );
             case 'messages':
-                return (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-2xl font-bold mb-4">Tin nhắn</h2>
-                        <p className="text-gray-600">Quản lý tin nhắn với ứng viên...</p>
-                    </div>
-                );
+                return <MessagesPage />;
             case 'company-profile':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">
@@ -60,10 +62,17 @@ const EmployerPage = () => {
         }
     };
 
+    const handleTabChange = (tabId) => {
+        if (tabId === 'post-job') {
+            setEditor({ mode: 'create', jobId: null })
+        }
+        setActiveTab(tabId)
+    }
+
     return (
         <DashboardLayout
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             menuItems={employerMenuItems}
             logo="/vite.svg"
             logoText="JobMate Employer"
