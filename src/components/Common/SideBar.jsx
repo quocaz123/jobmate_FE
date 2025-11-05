@@ -50,7 +50,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
             </div>
 
             {/* Main Navigation */}
-            <nav className="flex-1 px-3 py-4 overflow-y-auto">
+<nav className="flex-1 px-3 py-4 overflow-y-auto">
                 <ul className="space-y-1">
                     {sidebarItems.map((item) => {
                         const Icon = item.icon;
