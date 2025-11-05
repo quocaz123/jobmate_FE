@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   MapPin,
   Clock,
@@ -89,8 +88,7 @@ function tagClass(tag) {
   return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
-export default function JobList() {
-  const navigate = useNavigate();
+export default function JobList({ onViewDetail }) {
   const [query, setQuery] = useState("");
   const [bookmarks, setBookmarks] = useState(() =>
     JOBS_DATA.reduce((acc, j) => ({ ...acc, [j.id]: j.saved }), {})
@@ -112,10 +110,6 @@ export default function JobList() {
 
   function handleApply(jobTitle) {
     alert(`🎉 Bạn đã ứng tuyển vào công việc "${jobTitle}" thành công!`);
-  }
-
-  function handleViewDetail(id) {
-    navigate(`/student/job/${id}`);
   }
 
   return (
@@ -167,7 +161,6 @@ export default function JobList() {
                 key={job.id}
                 className="bg-white p-5 rounded-2xl shadow-sm border relative hover:-translate-y-1 hover:shadow-lg transition"
               >
-                {/* Bookmark */}
                 <button
                   onClick={() => toggleBookmark(job.id)}
                   className="absolute right-4 top-4 p-2 rounded-md hover:bg-gray-100 transition"
@@ -178,7 +171,6 @@ export default function JobList() {
                   />
                 </button>
 
-                {/* Header */}
                 <div className="flex items-start gap-4">
                   <div
                     className={`w-12 h-12 rounded-lg flex items-center justify-center text-sm font-semibold ${pastel}`}
@@ -193,7 +185,6 @@ export default function JobList() {
                   </div>
                 </div>
 
-                {/* Details */}
                 <div className="mt-4 text-sm text-gray-600 space-y-2">
                   <div className="flex items-center gap-2">
                     <MapPin size={16} className="text-gray-400" />
@@ -217,7 +208,6 @@ export default function JobList() {
                   </div>
                 </div>
 
-                {/* Tags */}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {job.tags.map((t, idx) => (
                     <span
@@ -229,14 +219,13 @@ export default function JobList() {
                   ))}
                 </div>
 
-                {/* Salary & Buttons */}
                 <div className="mt-5 flex items-center justify-between">
                   <div className="text-lg font-semibold text-pink-600">
                     {job.salary}
                   </div>
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => handleViewDetail(job.id)}
+                      onClick={() => onViewDetail(job.id)}
                       className="px-4 py-2 rounded-lg border hover:bg-gray-50 text-sm"
                     >
                       Chi tiết

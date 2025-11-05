@@ -11,10 +11,8 @@ import {
   Eye,
   MessageSquare,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
-export default function Application() {
-  const navigate = useNavigate();
+export default function Application({ onViewDetail }) {
   const [jobs, setJobs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredJobs, setFilteredJobs] = useState([]);
@@ -32,8 +30,6 @@ export default function Application() {
         status: "Đang xem xét",
         type: "part-time",
         statusColor: "bg-yellow-100 text-yellow-600",
-        image:
-          "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&w=400",
       },
       {
         id: 2,
@@ -46,8 +42,6 @@ export default function Application() {
         status: "Phỏng vấn",
         type: "part-time",
         statusColor: "bg-blue-100 text-blue-600",
-        image:
-          "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&w=400",
       },
       {
         id: 3,
@@ -60,37 +54,7 @@ export default function Application() {
         status: "Chấp nhận",
         type: "full-time",
         statusColor: "bg-green-100 text-green-600",
-        image:
-          "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&w=400",
       },
-      {
-        id: 4,
-        title: "Thiết kế Poster sự kiện",
-        company: "Công ty Event ABC",
-        location: "Remote",
-        salary: "500.000đ/poster",
-        schedule: "Linh hoạt",
-        appliedDate: "9/1/2024",
-        status: "Từ chối",
-        type: "freelance",
-        statusColor: "bg-red-100 text-red-600",
-        image:
-          "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&w=400",
-      },
-      ...Array.from({ length: 6 }, (_, i) => ({
-        id: i + 5,
-        title: `Công việc ${i + 5}`,
-        company: `Công ty ABC${i + 1}`,
-        location: "TP. Đà Nẵng",
-        salary: "20.000đ/giờ",
-        schedule: "Linh hoạt",
-        appliedDate: "8/1/2024",
-        status: "Đang xem xét",
-        type: "part-time",
-        statusColor: "bg-yellow-100 text-yellow-600",
-        image:
-          "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&w=400",
-      })),
     ];
     setJobs(fakeJobs);
     setFilteredJobs(fakeJobs);
@@ -177,12 +141,12 @@ export default function Application() {
             key={job.id}
             className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center hover:shadow-md transition"
           >
-            <div className="flex gap-4">
-              <img
-                src={job.image}
-                alt={job.title}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
+            <div className="flex gap-4 items-center">
+              {/* Avatar chữ cái đầu */}
+              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-lg shadow-sm border">
+                {job.title.charAt(0).toUpperCase()}
+              </div>
+
               <div>
                 <h3 className="font-semibold text-gray-800">{job.title}</h3>
                 <p className="text-sm text-gray-500">{job.company}</p>
@@ -208,15 +172,12 @@ export default function Application() {
 
             <div className="flex gap-2">
               <button
-                onClick={() => navigate(`/student/application/${job.id}`)}
+                onClick={() => onViewDetail(job.id)}
                 className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100"
               >
                 <Eye size={16} /> Chi tiết
               </button>
-              <button
-                onClick={() => navigate(`/student/chat/${job.company}`)}
-                className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100"
-              >
+              <button className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100">
                 <MessageSquare size={16} /> Nhắn tin
               </button>
             </div>
