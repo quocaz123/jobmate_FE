@@ -25,6 +25,8 @@ export const USER = {
     GET_USER_DETAIL: (userId) => `/jobmate/users/${userId}`,
     GET_USER_TOPRATED: "/jobmate/users/top-rated",
     GET_USER_TOP10: "/jobmate/users/top-10",
+    GET_LOCATION: "/jobmate/users/locations",
+    AUTO_COMPLETE_LOCATION: "/jobmate/users/location/auto",
 };
 
 export const NOTIFICATION = {
@@ -39,6 +41,7 @@ export const JOB = {
     VERIFY_JOB: (jobId) => `/jobmate/jobs/${jobId}/verify-job`,
     GET_JOBS: "/jobmate/jobs",
     GET_JOB_DETAIL: (jobId) => `/jobmate/jobs/${jobId}`,
+    GET_JOB_DETAIL_BY_ID_FOR_USER: (jobId) => `/jobmate/jobs/details/${jobId}`,
     GET_NEARBY_JOBS: "/jobmate/jobs/nearby",
     GET_MY_JOBS: "/jobmate/jobs/my-jobs",
     GET_AVAILABLE_JOBS: "/jobmate/jobs/available",

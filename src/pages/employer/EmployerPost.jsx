@@ -7,6 +7,8 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
     const [salary, setSalary] = useState('');
     const [description, setDescription] = useState('');
     const [skills, setSkills] = useState('');
+    const [requirements, setRequirements] = useState('');
+    const [benefits, setBenefits] = useState('');
     const [jobType, setJobType] = useState('PART_TIME');
     const [startAt, setStartAt] = useState('');
     const [deadline, setDeadline] = useState('');
@@ -42,6 +44,8 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
         setSalary('');
         setDescription('');
         setSkills('');
+        setRequirements('');
+        setBenefits('');
         setJobType('PART_TIME');
         setStartAt('');
         setDeadline('');
@@ -54,7 +58,7 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
         setContactPhone('');
     };
 
- 
+
     useEffect(() => {
         const load = async () => {
             if (!jobId) return;
@@ -67,6 +71,8 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
                 setSalary(j.salary ?? '');
                 setDescription(j.description || '');
                 setSkills(j.skills || '');
+                setRequirements(j.requirements || '');
+                setBenefits(j.benefits || '');
                 setJobType(j.jobType || 'PART_TIME');
                 setStartAt(toLocalInput(j.startAt));
                 setDeadline(toLocalInput(j.deadline));
@@ -77,7 +83,9 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
                 setWorkMode(j.workMode || 'ONSITE');
                 setCategory(j.category || '');
                 setContactPhone(j.contactPhone || '');
-            } catch {  }
+            } catch (err) {
+                console.warn('Failed to load job details:', err);
+            }
             finally {
                 setLoaded(true);
             }
@@ -111,6 +119,8 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
         const payload = {
             title: title.trim(),
             description: description.trim(),
+            requirements: requirements.trim(),
+            benefits: benefits.trim(),
             location: location.trim(),
             salary: Number(salary),
             jobType,
@@ -130,7 +140,7 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
         try {
             const res = mode === 'edit' && jobId ? await updateJob(jobId, payload) : await createJob(payload);
             const ok = res?.data?.code === 1000 || res?.status === 200 || res?.status === 201;
-            
+
             if (ok) {
                 setSuccess({ type: 'success', message: mode === 'edit' ? 'Đã cập nhật tin.' : 'Đã đăng tin thành công.' });
                 reset();
@@ -217,6 +227,31 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                        <label className="block text-sm font-medium text-gray-700">Yêu cầu</label>
+                        <textarea
+                            value={requirements}
+                            onChange={e => setRequirements(e.target.value)}
+                            disabled={mode === 'view' || (mode === 'edit' && !loaded)}
+                            rows={5}
+                            className="mt-1 block w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            placeholder="Ví dụ: Nắm vững React, có thể làm 20h/tuần..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Quyền lợi</label>
+                        <textarea
+                            value={benefits}
+                            onChange={e => setBenefits(e.target.value)}
+                            disabled={mode === 'view' || (mode === 'edit' && !loaded)}
+                            rows={5}
+                            className="mt-1 block w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            placeholder="Ví dụ: Lương thưởng, mentor, thời gian linh hoạt..."
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
                         <label className="block text-sm font-medium text-gray-700">Kỹ năng (phân tách bởi dấu phẩy)</label>
                         <input value={skills} onChange={e => setSkills(e.target.value)} disabled={mode === 'view' || (mode === 'edit' && !loaded)} className="mt-1 block w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Tiếng Anh, Giao tiếp" />
                     </div>
@@ -277,6 +312,9 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
                             {saving ? 'Đang lưu...' : (mode === 'edit' ? (loaded ? 'Cập nhật' : 'Đang tải...') : 'Đăng tin')}
                         </button>
                         <button type="button" onClick={reset} className="inline-flex items-center px-4 py-2 border border-gray-200 rounded bg-white">Làm lại</button>
+                        {mode === 'edit' && (
+                            <button type="button" onClick={() => onDone && onDone()} className="inline-flex items-center px-4 py-2 border border-gray-200 rounded bg-white">Quay lại</button>
+                        )}
                     </div>
                 ) : (
                     <div className="flex items-center gap-3">

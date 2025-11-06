@@ -19,6 +19,10 @@ export const getJobDetail = async (jobId) => {
     return await httpClient.get(JOB.GET_JOB_DETAIL(jobId));
 };
 
+export const getJobDetailByIdForUser = async (jobId) => {
+    return await httpClient.get(JOB.GET_JOB_DETAIL_BY_ID_FOR_USER(jobId));
+};
+
 export const getNearbyJobs = async (latitude, longitude, radius = 10) => {
     return await httpClient.get(JOB.GET_NEARBY_JOBS, { params: { latitude, longitude, radius } });
 };
@@ -26,3 +30,5 @@ export const getNearbyJobs = async (latitude, longitude, radius = 10) => {
 export const getAvailableJobs = async () => {
     return await httpClient.get(JOB.GET_AVAILABLE_JOBS);
 };
+
+

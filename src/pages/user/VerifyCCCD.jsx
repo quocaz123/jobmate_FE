@@ -14,6 +14,7 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
 
 export default function VerifyCCCD({ onSubmit }) {
+  // eslint-disable-next-line no-unused-vars
   const [step, setStep] = useState(1); // 1: front, 2: back, 3: review/sent
   const [frontFile, setFrontFile] = useState(null);
   const [backFile, setBackFile] = useState(null);
@@ -93,7 +94,7 @@ export default function VerifyCCCD({ onSubmit }) {
       streamRef.current = s;
       if (videoRef.current) videoRef.current.srcObject = s;
       if (videoRef.current) videoRef.current.play();
-    } catch (err) {
+    } catch {
       setError("Không mở được camera. Hãy cho phép quyền camera hoặc dùng upload file.");
       setCameraOpen(false);
     }
@@ -156,7 +157,7 @@ export default function VerifyCCCD({ onSubmit }) {
       setSuccess(true);
       setStep(3);
       if (onSubmit) onSubmit({ frontFile, backFile });
-    } catch (err) {
+    } catch {
       setError("Gửi thất bại. Thử lại.");
     } finally {
       setSending(false);
@@ -164,7 +165,7 @@ export default function VerifyCCCD({ onSubmit }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-sm">
+    <div>
       <h2 className="text-2xl font-semibold mb-2">Xác minh CCCD</h2>
       <p className="text-sm text-gray-500 mb-4">
         Vui lòng tải lên hoặc chụp <b>mặt trước</b> trước, sau đó mới tải lên/chụp <b>mặt sau</b>.

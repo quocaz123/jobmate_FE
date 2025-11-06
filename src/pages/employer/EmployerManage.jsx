@@ -40,6 +40,7 @@ export default function EmployerManage({ onView, onEdit }) {
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const pageSize = 10
+  const [openMenuId, setOpenMenuId] = useState(null)
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -93,12 +94,20 @@ export default function EmployerManage({ onView, onEdit }) {
     if (onEdit) onEdit(id)
   }
 
+  function handleCloseJob(id) {
+    const job = jobs.find(j => j.id === id)
+    if (!job) return
+    const ok = window.confirm('Đóng tin tuyển dụng này? Ứng viên sẽ không thể ứng tuyển.')
+    if (!ok) return
+    const next = jobs.map(j => j.id === id ? { ...j, status: 'CLOSED' } : j)
+    setJobs(next)
+    setOpenMenuId(null)
+    setMessage({ type: 'success', text: 'Đã đóng tin tuyển dụng.' })
+  }
+
   function filtered() {
     const q = query.trim().toLowerCase()
     return jobs.filter(job => {
-      if (filter === 'active' && !(job.status && job.status.includes('Đang'))) return false
-      if (filter === 'pending' && !(job.status && job.status.includes('Chờ'))) return false
-      if (filter === 'expired' && !(job.status && job.status.includes('Hết'))) return false
       if (!q) return true
       return (job.title || '').toLowerCase().includes(q) || (job.location || '').toLowerCase().includes(q)
     })
@@ -183,7 +192,7 @@ export default function EmployerManage({ onView, onEdit }) {
                   </div>
                 </div>
 
-                <div className="ml-4 flex items-center gap-3">
+                <div className="ml-4 flex items-center gap-3 relative">
                   <button onClick={() => (onView ? onView(job.id) : alert('Xem chi tiết'))} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded bg-white text-sm"><Eye size={16} /> Xem</button>
                   <div className="flex items-center gap-2">
                     <button
@@ -195,7 +204,20 @@ export default function EmployerManage({ onView, onEdit }) {
                       <Edit size={16} />
                     </button>
                     <button onClick={() => handleDelete(job.id)} className="p-2 rounded hover:bg-gray-50 text-red-600" title="Xóa"><Trash2 size={16} /></button>
-                    <button className="p-2 rounded hover:bg-gray-50 text-gray-400" title="Thêm"><MoreVertical size={16} /></button>
+                    <div className="relative">
+                      <button onClick={() => setOpenMenuId(openMenuId === job.id ? null : job.id)} className="p-2 rounded hover:bg-gray-50 text-gray-400" title="Thêm"><MoreVertical size={16} /></button>
+                      {openMenuId === job.id && (
+                        <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded shadow-md z-10">
+                          <button
+                            disabled={job.status !== 'APPROVED'}
+                            onClick={() => handleCloseJob(job.id)}
+                            className={`w-full text-left px-3 py-2 text-sm ${job.status !== 'APPROVED' ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                          >
+                            Đóng tin
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

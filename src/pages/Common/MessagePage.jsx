@@ -40,14 +40,19 @@ const ConversationList = ({ conversations, onSelectConversation, selectedConvers
       try {
         const res = await searchConversations(searchTerm)
         const data = res?.data?.data || []
-        const normalized = data.map((c) => ({
-          id: c.id,
-          name: c.conversationName || "Chưa đặt tên",
-          avatar: c.conversationAvatar || "U",
-          lastMessage: c.lastMessage || "Chưa có tin nhắn",
-          timestamp: new Date(c.modifiedDate).toLocaleString("vi-VN"),
-          unread: 0,
-        }))
+        const normalized = data.map((c) => {
+          const other = (c.participants || []).find(p => p.userId !== getCurrentUserId())
+          const name = other?.fullName || c.conversationName || 'Chưa đặt tên'
+          const avatar = other?.avatar || c.conversationAvatar || 'U'
+          return {
+            id: c.id,
+            name,
+            avatar,
+            lastMessage: c.lastMessage || 'Chưa có tin nhắn',
+            timestamp: c.modifiedDate ? new Date(c.modifiedDate).toLocaleString('vi-VN') : '',
+            unread: 0,
+          }
+        })
         setFilteredConversations(normalized)
       } catch (err) {
         console.error("Error searching conversations:", err)
@@ -82,10 +87,20 @@ const ConversationList = ({ conversations, onSelectConversation, selectedConvers
                 }`}
             >
               <div className="flex items-start gap-3">
-                <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {conversation.avatar || 'U'}
-                  </div>
+                <div className="relative flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-green-100 flex items-center justify-center text-white font-bold">
+                  {typeof conversation.avatar === 'string' && conversation.avatar.startsWith('http') ? (
+                    <img
+                      src={conversation.avatar}
+                      alt={conversation.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        e.currentTarget.parentElement.textContent = (conversation.name || 'U').charAt(0)
+                      }}
+                    />
+                  ) : (
+                    (conversation.name || 'U').charAt(0)
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
@@ -152,7 +167,7 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
 
     // Join room khi chọn conversation
     socket.emit('joinRoom', conversation.id)
-   
+
     const handleMessage = (data) => {
       try {
         const message = typeof data === "string" ? JSON.parse(data) : data
@@ -161,11 +176,11 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
           const currentUserId = getCurrentUserId()
           const isMe = message.sender?.userId === currentUserId
 
-        
+
           const normalized = {
-            ...message, 
-            me: isMe, 
-            sender: message.sender || {}, 
+            ...message,
+            me: isMe,
+            sender: message.sender || {},
             createdDate: message.createdDate || new Date().toISOString(),
           }
 
@@ -248,7 +263,7 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
           const filtered = prev.filter((m) => m.id !== tempId && m.id !== normalized.id)
           return [...filtered, normalized]
         })
-       
+
         onMessageSent(conversation.id)
       }
     } catch (err) {
@@ -262,12 +277,23 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
     <div className="h-full flex flex-col">
       <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-            {conversation.avatar}
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-green-100 flex items-center justify-center text-white font-bold">
+            {typeof conversation.avatar === 'string' && conversation.avatar.startsWith('http') ? (
+              <img
+                src={conversation.avatar}
+                alt={conversation.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.parentElement.textContent = (conversation.name || 'U').charAt(0)
+                }}
+              />
+            ) : (
+              (conversation.name || 'U').charAt(0)
+            )}
           </div>
           <div>
             <h3 className="font-semibold text-black">{conversation.name}</h3>
-            <p className="text-sm text-green-600">Đang hoạt động</p>
           </div>
         </div>
         <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
@@ -390,14 +416,19 @@ const MessagesPage = () => {
     const fetchConversations = async () => {
       try {
         const res = await getMyConversations()
-        const normalized = (res.data.data || []).map((c) => ({
-          id: c.id,
-          name: c.conversationName || "Chưa đặt tên",
-          avatar: c.conversationAvatar || "U",
-          lastMessage: c.lastMessage || "Chưa có tin nhắn",
-          timestamp: new Date(c.modifiedDate).toLocaleString("vi-VN"),
-          unread: 0,
-        }))
+        const normalized = (res.data.data || []).map((c) => {
+          const other = (c.participants || []).find(p => p.userId !== getCurrentUserId())
+          const name = other?.fullName || c.conversationName || 'Chưa đặt tên'
+          const avatar = other?.avatar || c.conversationAvatar || 'U'
+          return {
+            id: c.id,
+            name,
+            avatar,
+            lastMessage: c.lastMessage || 'Chưa có tin nhắn',
+            timestamp: c.modifiedDate ? new Date(c.modifiedDate).toLocaleString('vi-VN') : '',
+            unread: 0,
+          }
+        })
         setConversations(normalized)
       } catch (error) {
         console.error("Error fetching conversations:", error)

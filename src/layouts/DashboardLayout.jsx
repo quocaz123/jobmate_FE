@@ -3,6 +3,7 @@ import Sidebar from '../components/Common/Sidebar';
 import TopBar from '../components/Common/TopBar';
 import { getUserInfo } from '../utils/userUtils';
 import { getMenuItemsByRole } from '../utils/menuConfig';
+import { initUserLocation } from '../services/locationService';
 
 const DashboardLayout = ({
     children,
@@ -10,7 +11,8 @@ const DashboardLayout = ({
     onTabChange,
     menuItems, // Menu items được truyền từ page
     logo = "/vite.svg",
-    logoText = "JobMate"
+    logoText = "JobMate",
+    avatarUrl = null // Avatar URL từ props
 }) => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [userInfo, setUserInfo] = useState(null);
@@ -21,6 +23,21 @@ const DashboardLayout = ({
         if (userInfo) {
             setUserInfo(userInfo);
         }
+    }, []);
+
+    // Khởi tạo vị trí người dùng khi vào dashboard (chỉ chạy 1 lần)
+    useEffect(() => {
+        const initLocation = async () => {
+            try {
+                const location = await initUserLocation();
+                if (location) {
+                    localStorage.setItem('userLocation', JSON.stringify(location));
+                }
+            } catch (err) {
+                console.warn('Không thể khởi tạo vị trí:', err);
+            }
+        };
+        initLocation();
     }, []);
 
     // Nếu menuItems được truyền từ props thì dùng, nếu không thì tự động lấy theo role (backward compatibility)
@@ -68,6 +85,7 @@ const DashboardLayout = ({
                 <TopBar
                     inFor={userInfo?.fullName || ''}
                     role={userInfo?.role || 'Student'}
+                    avatar={avatarUrl}
                 />
                 <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
                     {children}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 // import { getUserInfo } from '../../utils/userUtils';
 import { employerMenuItems } from '../../utils/menuConfig';
@@ -7,11 +7,36 @@ import EmployerPost from './EmployerPost';
 import EmployerManage from './EmployerManage';
 import EmployerCandidates from './EmployerCandidates';
 import MessagesPage from '../Common/MessagePage';
+import Profile from '../user/Profile';
+import { getUserInfo } from '../../services/userService';
 
 const EmployerPage = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [editor, setEditor] = useState({ mode: 'create', jobId: null });
+    const [userInfo, setUserInfo] = useState(null);
+    const [avatarUrl, setAvatarUrl] = useState(null);
 
+    useEffect(() => {
+        const loadUserInfo = async () => {
+            try {
+                const res = await getUserInfo();
+                if (res?.data?.data) {
+                    const userData = res.data.data;
+                    setAvatarUrl(userData.avatarUrl || userData.avatar || null);
+                    // Lưu thông tin user
+                    setUserInfo({
+                        fullName: userData.fullName || userData.name || 'Người dùng',
+                        email: userData.email || '',
+                        role: userData.role || 'User',
+                        roles: userData.roles || [],
+                    });
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy thông tin user:', error);
+            }
+        };
+        loadUserInfo();
+    }, []);
 
 
     const renderContent = () => {
@@ -39,12 +64,7 @@ const EmployerPage = () => {
             case 'messages':
                 return <MessagesPage />;
             case 'company-profile':
-                return (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-2xl font-bold mb-4">Hồ sơ công ty</h2>
-                        <p className="text-gray-600">Quản lý thông tin công ty...</p>
-                    </div>
-                );
+                return <Profile userInfo={userInfo} />;
             case 'settings':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">
@@ -76,6 +96,7 @@ const EmployerPage = () => {
             menuItems={employerMenuItems}
             logo="/vite.svg"
             logoText="JobMate Employer"
+            avatarUrl={avatarUrl}
         >
             {renderContent()}
         </DashboardLayout>

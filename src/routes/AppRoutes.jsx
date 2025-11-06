@@ -26,7 +26,7 @@ const AppRoutes = () => {
 
                 {/* User Routes */}
                 <Route element={<ProtectRoute allowedRoles={["ROLE_USER", "ROLE_ADMIN", "ROLE_EMPLOYER"]} />}>
-                    <Route path="/user" element={<UserPage />} />
+                    <Route path="/home" element={<UserPage />} />
                 </Route>
 
                 {/* Employer Routes */}
