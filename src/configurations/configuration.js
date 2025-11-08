@@ -50,7 +50,11 @@ export const JOB = {
 export const APPLICATION = {
     APPLY_JOB: "/jobmate/applications/apply",
     GET_MY_APPLICATIONS: "/jobmate/applications/my-applications",
+    GET_APPLICATION_DETAIL: (applicationId) => `/jobmate/applications/${applicationId}`,
     GET_JOB_OF_APPLICATION: (jobId) => `/jobmate/applications/job/${jobId}`,
+    CANCEL_APPLICATION: (applicationId) => `/jobmate/applications/${applicationId}/cancel`,
+    GET_APPLICATIONS_BY_JOB: (jobId) => `/jobmate/applications/job/${jobId}`,
+    UPDATE_APPLICATION_STATUS: (applicationId) => `/jobmate/applications/${applicationId}/status`,
 }
 
 export const VERIFY = {
@@ -58,7 +62,8 @@ export const VERIFY = {
 }
 
 export const UPLOAD = {
-    UPLOAD_FILE: "/jobmate/upload/file",
+    UPLOAD_FILE: "/jobmate/files/upload",
+    GET_FILE: "/jobmate/files/private-url",
 }
 
 export const ADMIN = {

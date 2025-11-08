@@ -14,21 +14,33 @@ const NotificationBell = () => {
         try {
             setLoading(true);
             const response = await notificationService.getNotifications();
-            console.log(response)
-            // API trả về {code, message, data}, cần lấy response.data
+            // API trả về {code, message, data}, response từ service đã là response.data
+            // Vậy response có cấu trúc {code, message, data}
             const rawNotifications = response?.data || [];
 
             // Chuẩn hóa key để dùng thống nhất trong UI
-            const notifications = rawNotifications.map((n) => ({
-                id: n?.notification_id || n?.notificationId || n?.id,
-                isRead: n?.is_read ?? n?.isRead ?? n?.read ?? false,
-                message: n?.message,
-                title: n?.title,
-                createdAt: n?.sent_at || n?.createdAt || n?.created_at,
-            }));
+            const notifications = rawNotifications
+                .map((n) => {
+                    const isRead = n?.read === true; // Đảm bảo boolean: chỉ true khi read === true
+                    return {
+                        id: n?.id,
+                        isRead: isRead,
+                        message: n?.message || '',
+                        title: n?.title || '',
+                        createdAt: n?.createdAt || n?.created_at,
+                    };
+                })
+                .sort((a, b) => {
+                    // Sắp xếp: chưa đọc trước, sau đó theo thời gian mới nhất
+                    if (a.isRead !== b.isRead) {
+                        return a.isRead ? 1 : -1;
+                    }
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
 
             setItems(notifications);
-            setUnread(notifications.filter((n) => !n.isRead).length);
+            const unreadCount = notifications.filter((n) => !n.isRead).length;
+            setUnread(unreadCount);
         } catch (error) {
             console.error('Lỗi khi tải thông báo:', error);
         } finally {
@@ -40,9 +52,8 @@ const NotificationBell = () => {
     const handleRead = async (id) => {
         try {
             await notificationService.markAsRead(id);
-            const updated = items.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-            setItems(updated);
-            setUnread(updated.filter((n) => !n.isRead).length);
+            // Refresh lại danh sách từ API để đảm bảo đồng bộ với backend
+            await refreshList();
         } catch (err) {
             console.error('Lỗi khi đánh dấu đã đọc:', err);
         }
@@ -54,9 +65,8 @@ const NotificationBell = () => {
             await Promise.all(
                 items.filter((n) => !n.isRead).map((n) => notificationService.markAsRead(n.id))
             );
-            const updated = items.map((n) => ({ ...n, isRead: true }));
-            setItems(updated);
-            setUnread(0);
+            // Refresh lại danh sách từ API để đảm bảo đồng bộ với backend
+            await refreshList();
         } catch (err) {
             console.error('Lỗi khi đánh dấu tất cả:', err);
         }
@@ -125,26 +135,40 @@ const NotificationBell = () => {
                             </div>
                         ) : (
                             items.map((n) => (
-                                <div
+                                <button
                                     key={n.id}
-                                    className={`p-3 border-b last:border-b-0 ${n.isRead ? 'bg-white' : 'bg-indigo-50'
+                                    onClick={() => !n.isRead && handleRead(n.id)}
+                                    className={`w-full text-left p-3 border-b last:border-b-0 transition-colors group ${n.isRead
+                                        ? 'bg-white hover:bg-gray-50'
+                                        : 'bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100'
                                         }`}
                                 >
-                                    <div className="text-sm text-gray-800">{n.message}</div>
-                                    <div className="mt-2 flex items-center justify-between">
-                                        <span className="text-xs text-gray-400">
-                                            {n.createdAt?.replace('T', ' ').slice(0, 19)}
-                                        </span>
+                                    <div className="flex items-start gap-2">
                                         {!n.isRead && (
-                                            <button
-                                                onClick={() => handleRead(n.id)}
-                                                className="text-xs text-indigo-600 hover:underline"
-                                            >
-                                                Đánh dấu đã đọc
-                                            </button>
+                                            <span className="mt-1 h-2 w-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
                                         )}
+                                        <div className="flex-1">
+                                            {n.title && (
+                                                <p className={`text-sm font-medium ${n.isRead ? 'text-gray-700' : 'text-gray-900'}`}>
+                                                    {n.title}
+                                                </p>
+                                            )}
+                                            <p className={`text-sm mt-1 ${n.isRead ? 'text-gray-600' : 'text-gray-800'}`}>
+                                                {n.message}
+                                            </p>
+                                            <div className="mt-2 flex items-center justify-between">
+                                                <span className="text-xs text-gray-400">
+                                                    {n.createdAt?.replace('T', ' ').slice(0, 19) || ''}
+                                                </span>
+                                                {!n.isRead && (
+                                                    <span className="text-xs text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        Click để đánh dấu đã đọc
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                </button>
                             ))
                         )}
                     </div>

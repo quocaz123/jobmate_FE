@@ -18,3 +18,4 @@ const VerifyCCCDTab = ({ onVerifySuccess }) => {
 
 export default VerifyCCCDTab;
 
+

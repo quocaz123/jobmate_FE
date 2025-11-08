@@ -9,7 +9,6 @@ export const userMenuItems = [
     { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
     { id: 'schedule', label: 'Lịch làm việc', icon: Calendar },
     { id: 'profile', label: 'Hồ sơ', icon: User },
-    { id: 'verify-id', label: 'Xác minh CCCD', icon: Shield },
 ];
 
 // Menu items cho Employer
@@ -17,10 +16,10 @@ export const employerMenuItems = [
     { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
     { id: 'post-job', label: 'Đăng tin tuyển dụng', icon: Briefcase },
     { id: 'manage-jobs', label: 'Quản lý tin tuyển dụng', icon: ClipboardList },
-    { id: 'candidates', label: 'Ứng viên', icon: UserCheck },
+    // { id: 'candidates', label: 'Ứng viên', icon: UserCheck },
     { id: 'search-candidates', label: 'Tìm ứng viên', icon: Search },
     { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
-    { id: 'company-profile', label: 'Hồ sơ công ty', icon: Building2 },
+     { id: 'profile', label: 'Hồ sơ', icon: User },
     { id: 'settings', label: 'Cài đặt', icon: Settings },
 ];
 

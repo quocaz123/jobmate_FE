@@ -10,7 +10,6 @@ import ApplicationDetail from './ApplicationDetail';
 import JobRequest from './JobRequest';
 import Profile from './Profile';
 import WorkSchedule from './WorkSchedule';
-import VerifyCCCD from './VerifyCCCD';
 import MessagesPage from '../Common/MessagePage';
 
 const UserPage = () => {
@@ -26,14 +25,8 @@ const UserPage = () => {
                 const res = await getUserInfo();
                 if (res?.data?.data) {
                     const userData = res.data.data;
+                    setUserInfo(userData);
                     setAvatarUrl(userData.avatarUrl || userData.avatar || null);
-                    // Lưu thông tin user
-                    setUserInfo({
-                        fullName: userData.fullName || userData.name || 'Người dùng',
-                        email: userData.email || '',
-                        role: userData.role || 'User',
-                        roles: userData.roles || [],
-                    });
                 }
             } catch (error) {
                 console.error('Lỗi khi lấy thông tin user:', error);
@@ -42,6 +35,19 @@ const UserPage = () => {
         loadUserInfo();
     }, []);
 
+    const handleAvatarChange = (newUrl) => {
+        setAvatarUrl(newUrl || null);
+        setUserInfo((prev) => (prev ? { ...prev, avatarUrl: newUrl } : prev));
+    };
+
+    const handleProfileUpdate = (updatedProfile) => {
+        if (!updatedProfile) return;
+        setUserInfo((prev) => (prev ? { ...prev, ...updatedProfile } : updatedProfile));
+        if (updatedProfile.avatarUrl) {
+            setAvatarUrl(updatedProfile.avatarUrl);
+        }
+    };
+
     const renderContent = () => {
         switch (activeTab) {
             case 'overview':
@@ -49,6 +55,7 @@ const UserPage = () => {
             case 'find-jobs':
                 return (
                     <JobList
+                        userInfo={userInfo}
                         onViewDetail={(id) => {
                             setSelectedJobId(id);
                             setActiveTab('job-detail');
@@ -61,6 +68,7 @@ const UserPage = () => {
                         id={selectedJobId}
                         onBack={() => setActiveTab('find-jobs')}
                         onStartChat={() => setActiveTab('messages')}
+                        userInfo={userInfo}
                     />
                 );
             case 'applications':
@@ -70,6 +78,7 @@ const UserPage = () => {
                             setSelectedApplicationId(id);
                             setActiveTab('application-detail');
                         }}
+                        onStartChat={() => setActiveTab('messages')}
                     />
                 );
             case 'application-detail':
@@ -77,6 +86,7 @@ const UserPage = () => {
                     <ApplicationDetail
                         id={selectedApplicationId}
                         onBack={() => setActiveTab('applications')}
+                        onStartChat={() => setActiveTab('messages')}
                     />
                 );
             case 'messages':
@@ -84,9 +94,13 @@ const UserPage = () => {
             case 'schedule':
                 return <WorkSchedule events={[]} />;
             case 'profile':
-                return <Profile userInfo={userInfo} />;
-            case 'verify-id':
-                return <VerifyCCCD />;
+                return (
+                    <Profile
+                        userInfo={userInfo}
+                        onAvatarChange={handleAvatarChange}
+                        onProfileUpdate={handleProfileUpdate}
+                    />
+                );
             case 'job-requests':
                 return <JobRequest />;
             default:

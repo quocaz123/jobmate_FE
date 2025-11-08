@@ -50,10 +50,11 @@ const EmployerPage = () => {
                     <EmployerManage
                         onView={(jobId) => { setEditor({ mode: 'view', jobId }); setActiveTab('post-job'); }}
                         onEdit={(jobId) => { setEditor({ mode: 'edit', jobId }); setActiveTab('post-job'); }}
+                        onStartChat={() => setActiveTab('messages')}
                     />
                 );
             case 'candidates':
-                return <EmployerCandidates />;
+                return <EmployerCandidates onStartChat={() => setActiveTab('messages')} />;
             case 'search-candidates':
                 return (
                     <div className="bg-white rounded-lg shadow p-6">
@@ -63,7 +64,7 @@ const EmployerPage = () => {
                 );
             case 'messages':
                 return <MessagesPage />;
-            case 'company-profile':
+            case 'profile':
                 return <Profile userInfo={userInfo} />;
             case 'settings':
                 return (

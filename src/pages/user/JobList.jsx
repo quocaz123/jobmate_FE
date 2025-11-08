@@ -42,7 +42,7 @@ function tagClass(tag) {
   return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
-export default function JobList({ onViewDetail }) {
+export default function JobList({ onViewDetail, userInfo }) {
   const [query, setQuery] = useState("");
   const [bookmarks, setBookmarks] = useState({});
   const [jobs, setJobs] = useState([]);
@@ -288,6 +288,7 @@ export default function JobList({ onViewDetail }) {
             setSelectedJob(null);
           }}
           jobTitle={selectedJob.title}
+          userInfo={userInfo}
           jobId={selectedJob.id || selectedJob.job_id || selectedJob.jobId}
         />
       )}

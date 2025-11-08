@@ -11,7 +11,7 @@ import UserPage from "../pages/user/UserPage";
 import EmployerPage from "../pages/employer/EmployerPage";
 import AdminPage from "../pages/admin/AdminPage";
 import Overview from "../pages/Common/Overview";
-
+import Profile from "../pages/user/Profile";
 const AppRoutes = () => {
     return (
         <Router>
@@ -27,6 +27,7 @@ const AppRoutes = () => {
                 {/* User Routes */}
                 <Route element={<ProtectRoute allowedRoles={["ROLE_USER", "ROLE_ADMIN", "ROLE_EMPLOYER"]} />}>
                     <Route path="/home" element={<UserPage />} />
+                    <Route path="/profile" element={<Profile />} />
                 </Route>
 
                 {/* Employer Routes */}

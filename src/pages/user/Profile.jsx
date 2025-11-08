@@ -15,13 +15,15 @@ import TwoFactorTab from "./ProfileTabs/TwoFactorTab";
 import VerifyCCCDTab from "./ProfileTabs/VerifyCCCDTab";
 import ReviewsTab from "./ProfileTabs/ReviewsTab";
 import CareerInfoTab from "./ProfileTabs/CareerInfoTab";
+import { uploadFile } from "../../services/uploadFileService";
+import { updateUserInfo } from "../../services/userService";
 
 // Dữ liệu mẫu (thay bằng API sau)
 const MOCK_USER = {
   fullName: "John Doe Updated",
   email: "quocthangbinh2345@gmail.com",
   address: "33 Lão Bạng, Hải Châu , Đà Nẵng",
-  avatarUrl: "https://jobmate-media.s3.ap-southeast-2.amazonaws.com/users/7364353e-3120-47df-920f-450c33f68982/avatar/tải_xuống_(14).jpg",
+  avatarUrl: "",
   roles: [{ name: "USER", description: "Người dùng hệ thống" }],
   verificationStatus: "VERIFIED",
   status: "ACTIVE",
@@ -71,51 +73,85 @@ const MOCK_USER = {
   ]
 };
 
-const Profile = ({ userInfo }) => {
+const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState(MOCK_USER);
+  const [profile, setProfile] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
   const [activeTab, setActiveTab] = useState("info"); // "info", "2fa", "verify", "reviews"
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   useEffect(() => {
-    // Nếu có userInfo từ props, merge với MOCK_USER
+    console.log("Received userInfo:", userInfo);
     if (userInfo) {
-      setProfile((prev) => ({
-        ...prev,
-        fullName: userInfo.fullName || prev.fullName,
-        email: userInfo.email || prev.email,
-        role: userInfo.role || prev.role,
-        roles: userInfo.roles || prev.roles,
-      }));
+      setProfile({
+        ...MOCK_USER,  // fallback nếu thiếu field
+        ...userInfo,   // dữ liệu thực từ API ưu tiên hơn
+      });
     }
-    // Reset avatar error khi profile thay đổi
     setAvatarError(false);
-    // Sau này thay bằng API fetch để lấy đầy đủ thông tin
   }, [userInfo]);
 
   useEffect(() => {
-    // Log để debug
-    console.log('Avatar URL:', profile.avatarUrl);
-  }, [profile.avatarUrl]);
+    if (userInfo?.avatarUrl) {
+      setProfile((prev) => (prev ? { ...prev, avatarUrl: userInfo.avatarUrl } : prev));
+    }
+  }, [userInfo?.avatarUrl]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    console.log("Lưu dữ liệu:", profile);
+  const handleSave = async () => {
+    if (!profile) return;
+
+    try {
+      const res = await updateUserInfo(profile);
+      const updatedProfile = res?.data?.data ? { ...profile, ...res.data.data } : profile;
+
+      setProfile(updatedProfile);
+
+      if (updatedProfile.avatarUrl && onAvatarChange) {
+        onAvatarChange(updatedProfile.avatarUrl);
+      }
+
+      if (onProfileUpdate) {
+        onProfileUpdate(updatedProfile);
+      }
+
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Lỗi khi cập nhật hồ sơ:", error);
+    }
   };
 
   const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("vi-VN");
 
-  const isVerified = profile.verificationStatus === "VERIFIED";
+  const isVerified = profile?.verificationStatus === "VERIFIED";
 
   // Disable nút chỉnh sửa khi ở các tab không cho phép chỉnh sửa
   const isEditDisabled = ["2fa", "verify", "reviews"].includes(activeTab);
+
+  if (!profile) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Hồ sơ cá nhân</h1>
+            <p className="text-gray-500">Đang tải dữ liệu hồ sơ...</p>
+          </div>
+          <button className="px-4 py-2 rounded-lg bg-gray-300 text-white" disabled>
+            Chỉnh sửa
+          </button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white border rounded-lg p-6 shadow-sm h-64 animate-pulse" />
+          <div className="col-span-2 bg-white border rounded-lg p-6 shadow-sm h-64 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -150,7 +186,7 @@ const Profile = ({ userInfo }) => {
           <div className="flex flex-col items-center text-center relative">
             <div className="relative w-24 h-24 mb-3">
               <img
-                src={avatarError || !profile.avatarUrl ? "https://via.placeholder.com/150" : profile.avatarUrl}
+                src={avatarError || !profile?.avatarUrl ? "https://via.placeholder.com/150" : profile.avatarUrl}
                 alt="Avatar"
                 className="w-24 h-24 rounded-full object-cover border"
                 onError={() => {
@@ -160,20 +196,39 @@ const Profile = ({ userInfo }) => {
                 onLoad={() => setAvatarError(false)}
               />
               <button
-                className="absolute bottom-0 right-0 bg-cyan-600 p-1.5 rounded-full hover:bg-cyan-700 transition"
-                title="Tải ảnh lên"
+                className={`absolute bottom-0 right-0 p-1.5 rounded-full transition ${isEditing ? "bg-gray-400 cursor-not-allowed" : "bg-cyan-600 hover:bg-cyan-700"}`}
+                title={isEditing ? "Không thể đổi avatar khi đang chỉnh sửa" : "Tải ảnh lên"}
+                disabled={isEditing}
                 onClick={() => {
-                  // TODO: Mở file picker để upload avatar
+                  if (isEditing) return;
+
                   const input = document.createElement('input');
                   input.type = 'file';
                   input.accept = 'image/*';
-                  input.onchange = (e) => {
+
+                  input.onchange = async (e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
-                      // TODO: Upload file và cập nhật avatarUrl
-                      console.log('Upload avatar:', file);
+                    if (!file) return;
+
+                    try {
+                      const uploadRes = await uploadFile(file, "AVATAR");
+
+                      const newAvatarUrl = uploadRes?.url || uploadRes?.fileUrl || uploadRes;
+
+                      setProfile(prev => ({
+                        ...prev,
+                        avatarUrl: newAvatarUrl
+                      }));
+
+                      if (onAvatarChange && newAvatarUrl) {
+                        onAvatarChange(newAvatarUrl);
+                      }
+
+                    } catch (err) {
+                      console.error("Lỗi upload avatar:", err);
                     }
                   };
+
                   input.click();
                 }}
               >

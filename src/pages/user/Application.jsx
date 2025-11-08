@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FileText,
   AlertCircle,
@@ -10,96 +10,181 @@ import {
   Clock,
   Eye,
   MessageSquare,
+  MoreVertical,
+  Trash2,
+  Search,
 } from "lucide-react";
+import { getMyApplications, cancelApplication } from "../../services/applicationService";
+import { createConversation } from "../../services/chatService";
 
-export default function Application({ onViewDetail }) {
-  const [jobs, setJobs] = useState([]);
+export default function Application({ onViewDetail, onStartChat }) {
+  const [applications, setApplications] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [filteredApplications, setFilteredApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRefs = useRef({});
+  const [pagination, setPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    pageSize: 10,
+    totalElements: 0
+  });
 
   useEffect(() => {
-    const fakeJobs = [
-      {
-        id: 1,
-        title: "Nhân viên phục vụ",
-        company: "Nhà hàng Italia",
-        location: "Quận 1, TP.HCM",
-        salary: "25.000đ/giờ",
-        schedule: "Thứ 2, 4, 6 • 18:00-22:00",
-        appliedDate: "15/1/2024",
-        status: "Đang xem xét",
-        type: "part-time",
-        statusColor: "bg-yellow-100 text-yellow-600",
-      },
-      {
-        id: 2,
-        title: "Nhân viên bán hàng",
-        company: "Cửa hàng thời trang XY",
-        location: "Quận 3, TP.HCM",
-        salary: "30.000đ/giờ",
-        schedule: "Thứ 7, CN • 9:00-17:00",
-        appliedDate: "12/1/2024",
-        status: "Phỏng vấn",
-        type: "part-time",
-        statusColor: "bg-blue-100 text-blue-600",
-      },
-      {
-        id: 3,
-        title: "Trợ giảng tiếng Anh",
-        company: "Trung tâm Anh ngữ ILA",
-        location: "Quận Bình Thạnh",
-        salary: "6-8 triệu/tháng",
-        schedule: "T2 - T6",
-        appliedDate: "10/1/2024",
-        status: "Chấp nhận",
-        type: "full-time",
-        statusColor: "bg-green-100 text-green-600",
-      },
-    ];
-    setJobs(fakeJobs);
-    setFilteredJobs(fakeJobs);
+    loadApplications();
   }, []);
+
+  // Đóng menu khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openMenuId && menuRefs.current[openMenuId] && !menuRefs.current[openMenuId].contains(event.target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId]);
+
+  const loadApplications = async (page = 0, size = 10) => {
+    try {
+      setLoading(true);
+      const response = await getMyApplications(page, size);
+      const data = response?.data?.data;
+
+      if (data) {
+        // Map dữ liệu từ API response
+        // API trả về applicationId, cần map thành id để component sử dụng
+        const mappedApplications = (data.data || []).map((app) => ({
+          ...app,
+          id: app.applicationId || app.id, // Ưu tiên applicationId từ API
+        }));
+        setApplications(mappedApplications);
+        setFilteredApplications(mappedApplications);
+        setPagination({
+          currentPage: data.currentPage || 0,
+          totalPages: data.totalPages || 0,
+          pageSize: data.pageSize || 10,
+          totalElements: data.totalElements || 0
+        });
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách ứng tuyển:", error);
+      setApplications([]);
+      setFilteredApplications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Map status từ backend sang tiếng Việt
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      PENDING: { label: "Đang xem xét", color: "bg-yellow-100 text-yellow-600" },
+      ACCEPTED: { label: "Chấp nhận", color: "bg-green-100 text-green-600" },
+      REJECTED: { label: "Từ chối", color: "bg-red-100 text-red-600" },
+      CANCELLED: { label: "Đã hủy", color: "bg-gray-100 text-gray-600" }
+    };
+    return statusMap[status] || { label: status, color: "bg-gray-100 text-gray-600" };
+  };
+
+  // Map jobType từ backend sang tiếng Việt
+  const getJobTypeLabel = (jobType) => {
+    const typeMap = {
+      FULL_TIME: "Toàn thời gian",
+      PART_TIME: "Bán thời gian",
+      FREELANCE: "Freelance",
+      INTERNSHIP: "Thực tập"
+    };
+    return typeMap[jobType] || jobType;
+  };
+
+  // Format salary
+  const formatSalary = (salary, salaryUnit) => {
+    if (!salary) return "Thỏa thuận";
+    const formattedSalary = parseFloat(salary).toLocaleString("vi-VN");
+    return `${formattedSalary}đ/${salaryUnit || "tháng"}`;
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN");
+  };
+
+  const handleChat = async (employerId) => {
+    if (!employerId) {
+      console.warn("Không có employerId để tạo conversation");
+      return;
+    }
+
+    try {
+      await createConversation({ participantIds: [employerId] });
+      if (onStartChat) {
+        onStartChat();
+      }
+    } catch (error) {
+      console.error("Lỗi khi tạo conversation:", error);
+      alert(error?.response?.data?.message || "Không thể tạo cuộc trò chuyện. Vui lòng thử lại.");
+    }
+  };
+
+  const handleCancelApplication = async (applicationId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn ứng tuyển này không?")) {
+      return;
+    }
+
+    try {
+      await cancelApplication(applicationId);
+      // Reload danh sách
+      await loadApplications(pagination.currentPage, pagination.pageSize);
+      setOpenMenuId(null);
+      alert("Đã hủy đơn ứng tuyển thành công");
+    } catch (error) {
+      console.error("Lỗi khi hủy đơn ứng tuyển:", error);
+      alert(error?.response?.data?.message || "Không thể hủy đơn ứng tuyển. Vui lòng thử lại.");
+    }
+  };
 
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearchTerm(value);
-    const filtered = jobs.filter(
-      (job) =>
-        job.title.toLowerCase().includes(value) ||
-        job.company.toLowerCase().includes(value)
+    const filtered = applications.filter(
+      (app) =>
+        app.jobTitle?.toLowerCase().includes(value) ||
+        app.companyName?.toLowerCase().includes(value)
     );
-    setFilteredJobs(filtered);
+    setFilteredApplications(filtered);
   };
 
   const stats = [
     {
       id: 1,
       label: "Tổng số",
-      value: jobs.length,
+      value: pagination.totalElements,
       icon: <FileText className="text-gray-500" size={22} />,
     },
     {
       id: 2,
       label: "Đang xem xét",
-      value: jobs.filter((j) => j.status === "Đang xem xét").length,
+      value: applications.filter((app) => app.status === "PENDING").length,
       icon: <AlertCircle className="text-yellow-500" size={22} />,
     },
+
     {
       id: 3,
-      label: "Phỏng vấn",
-      value: jobs.filter((j) => j.status === "Phỏng vấn").length,
-      icon: <CalendarCheck className="text-blue-500" size={22} />,
-    },
-    {
-      id: 4,
       label: "Chấp nhận",
-      value: jobs.filter((j) => j.status === "Chấp nhận").length,
+      value: applications.filter((app) => app.status === "ACCEPTED").length,
       icon: <CheckCircle className="text-green-500" size={22} />,
     },
     {
-      id: 5,
+      id: 4,
       label: "Từ chối",
-      value: jobs.filter((j) => j.status === "Từ chối").length,
+      value: applications.filter((app) => app.status === "REJECTED").length,
       icon: <XCircle className="text-red-500" size={22} />,
     },
   ];
@@ -110,7 +195,7 @@ export default function Application({ onViewDetail }) {
       <p className="text-gray-500">Theo dõi trạng thái các đơn ứng tuyển của bạn</p>
 
       {/* Thống kê */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
         {stats.map((s) => (
           <div
             key={s.id}
@@ -136,54 +221,143 @@ export default function Application({ onViewDetail }) {
 
       {/* Danh sách công việc */}
       <div className="space-y-4">
-        {filteredJobs.map((job) => (
-          <div
-            key={job.id}
-            className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center hover:shadow-md transition"
-          >
-            <div className="flex gap-4 items-center">
-              {/* Avatar chữ cái đầu */}
-              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-lg shadow-sm border">
-                {job.title.charAt(0).toUpperCase()}
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-800">{job.title}</h3>
-                <p className="text-sm text-gray-500">{job.company}</p>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mt-1">
-                  <MapPin size={14} /> {job.location} • <DollarSign size={14} />{" "}
-                  {job.salary} • <Clock size={14} /> {job.schedule}
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${job.statusColor}`}
-                  >
-                    {job.status}
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                    {job.type}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    Ứng tuyển: {job.appliedDate}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => onViewDetail(job.id)}
-                className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100"
-              >
-                <Eye size={16} /> Chi tiết
-              </button>
-              <button className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100">
-                <MessageSquare size={16} /> Nhắn tin
-              </button>
-            </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Đang tải dữ liệu...</p>
           </div>
-        ))}
+        ) : filteredApplications.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
+            <FileText className="mx-auto text-gray-400 mb-4" size={48} />
+            <p className="text-gray-600 font-medium">Chưa có đơn ứng tuyển nào</p>
+            <p className="text-gray-500 text-sm mt-2">Hãy tìm kiếm và ứng tuyển các công việc phù hợp với bạn</p>
+          </div>
+        ) : (
+          filteredApplications.map((app) => {
+            const statusInfo = getStatusLabel(app.status);
+            const schedule = `${app.workingDays || ""}${app.workingHours ? ` • ${app.workingHours}` : ""}`;
+
+            return (
+              <div
+                key={app.id}
+                className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center hover:shadow-md transition"
+              >
+                <div className="flex gap-4 items-center flex-1">
+                  {/* Avatar chữ cái đầu */}
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-lg shadow-sm border flex-shrink-0">
+                    {app.jobTitle?.charAt(0).toUpperCase() || "J"}
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">{app.jobTitle || "Công việc"}</h3>
+                    <p className="text-sm text-gray-500">{app.companyName || ""}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mt-1">
+                      {app.location && (
+                        <>
+                          <MapPin size={14} /> <span>{app.location}</span>
+                        </>
+                      )}
+                      {app.salary && (
+                        <>
+                          {app.location && " • "}
+                          <DollarSign size={14} /> <span>{formatSalary(app.salary, app.salaryUnit)}</span>
+                        </>
+                      )}
+                      {schedule && (
+                        <>
+                          {(app.location || app.salary) && " • "}
+                          <Clock size={14} /> <span>{schedule}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2 items-center">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}
+                      >
+                        {statusInfo.label}
+                      </span>
+                      {app.jobType && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                          {getJobTypeLabel(app.jobType)}
+                        </span>
+                      )}
+                      {app.appliedAt && (
+                        <span className="text-xs text-gray-400">
+                          Ứng tuyển: {formatDate(app.appliedAt)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 items-center flex-shrink-0 ml-4">
+                  <button
+                    onClick={() => onViewDetail(app.id)}
+                    className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100 whitespace-nowrap"
+                  >
+                    <Eye size={16} /> Chi tiết
+                  </button>
+                  {app.employerId && (
+                    <button
+                      onClick={() => handleChat(app.employerId)}
+                      className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <MessageSquare size={16} /> Nhắn tin
+                    </button>
+                  )}
+
+                  {/* Menu 3 chấm */}
+                  <div className="relative" ref={(el) => (menuRefs.current[app.id] = el)}>
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)}
+                      className="p-2 border rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <MoreVertical size={18} className="text-gray-600" />
+                    </button>
+
+                    {openMenuId === app.id && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
+                        <div className="py-1">
+                          {app.status === "PENDING" && (
+                            <button
+                              onClick={() => handleCancelApplication(app.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 size={16} /> Hủy đơn ứng tuyển
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
+          <button
+            onClick={() => loadApplications(pagination.currentPage - 1, pagination.pageSize)}
+            disabled={pagination.currentPage === 0}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Trước
+          </button>
+          <span className="text-sm text-gray-600">
+            Trang {pagination.currentPage + 1} / {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => loadApplications(pagination.currentPage + 1, pagination.pageSize)}
+            disabled={pagination.currentPage >= pagination.totalPages - 1}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sau
+          </button>
+        </div>
+      )}
     </div>
   );
 }

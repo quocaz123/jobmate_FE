@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { MapPin, DollarSign, Clock, Users, Eye, MoreVertical, Trash2, Edit, Search, Calendar } from 'lucide-react'
 import { get_my_Jobs } from '../../services/jobService'
 import Pagination from '../../components/Common/Pagination'
+import EmployerCandidates from './EmployerCandidates'
 
 function statusStyle(status) {
   switch (status) {
@@ -31,7 +32,7 @@ const formatInstant = (isoUtc) => {
 }
 
 
-export default function EmployerManage({ onView, onEdit }) {
+export default function EmployerManage({ onView, onEdit, onStartChat }) {
   const [jobs, setJobs] = useState([])
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
@@ -41,6 +42,10 @@ export default function EmployerManage({ onView, onEdit }) {
   const [totalPages, setTotalPages] = useState(1)
   const pageSize = 10
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [showCandidates, setShowCandidates] = useState(false)
+  const [selectedJobId, setSelectedJobId] = useState(null)
+  const [selectedJobTitle, setSelectedJobTitle] = useState(null)
+  const menuRefs = useRef({})
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -82,6 +87,20 @@ export default function EmployerManage({ onView, onEdit }) {
     }
   }, [message])
 
+  // Đóng menu khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openMenuId && menuRefs.current[openMenuId] && !menuRefs.current[openMenuId].contains(event.target)) {
+        setOpenMenuId(null)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [openMenuId])
+
   function handleDelete(id) {
     const ok = window.confirm('Bạn có chắc muốn xóa tin tuyển dụng này?')
     if (!ok) return
@@ -105,12 +124,48 @@ export default function EmployerManage({ onView, onEdit }) {
     setMessage({ type: 'success', text: 'Đã đóng tin tuyển dụng.' })
   }
 
+  function handleViewCandidates(jobId, jobTitle) {
+    setSelectedJobId(jobId)
+    setSelectedJobTitle(jobTitle)
+    setShowCandidates(true)
+    setOpenMenuId(null)
+  }
+
   function filtered() {
     const q = query.trim().toLowerCase()
     return jobs.filter(job => {
       if (!q) return true
       return (job.title || '').toLowerCase().includes(q) || (job.location || '').toLowerCase().includes(q)
     })
+  }
+
+  // Nếu đang xem danh sách ứng viên, render EmployerCandidates
+  if (showCandidates) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm p-8">
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              onClick={() => {
+                setShowCandidates(false)
+                setSelectedJobId(null)
+                setSelectedJobTitle(null)
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-4xl font-extrabold tracking-tight">Danh sách ứng viên</h1>
+              <p className="text-gray-500 mt-2">{selectedJobTitle}</p>
+            </div>
+          </div>
+        </div>
+        <EmployerCandidates jobId={selectedJobId} onStartChat={onStartChat} />
+      </div>
+    )
   }
 
   return (
@@ -204,10 +259,16 @@ export default function EmployerManage({ onView, onEdit }) {
                       <Edit size={16} />
                     </button>
                     <button onClick={() => handleDelete(job.id)} className="p-2 rounded hover:bg-gray-50 text-red-600" title="Xóa"><Trash2 size={16} /></button>
-                    <div className="relative">
+                    <div className="relative" ref={(el) => (menuRefs.current[job.id] = el)}>
                       <button onClick={() => setOpenMenuId(openMenuId === job.id ? null : job.id)} className="p-2 rounded hover:bg-gray-50 text-gray-400" title="Thêm"><MoreVertical size={16} /></button>
                       {openMenuId === job.id && (
-                        <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded shadow-md z-10">
+                        <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded shadow-md z-10">
+                          <button
+                            onClick={() => handleViewCandidates(job.id, job.title)}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Users size={16} /> Xem danh sách ứng viên
+                          </button>
                           <button
                             disabled={job.status !== 'APPROVED'}
                             onClick={() => handleCloseJob(job.id)}

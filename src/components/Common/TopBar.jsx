@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import { logout } from '../../services/authService';
 import { removeToken } from '../../services/localStorageService';
+import { useNavigate } from 'react-router-dom';
 
 const TopBar = ({ inFor, role, avatar }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -23,6 +24,9 @@ const TopBar = ({ inFor, role, avatar }) => {
         logout();
         removeToken();
         window.location.href = '/login';
+    };
+    const handleProfile = () => {
+         navigator('/profile');
     }
 
     // Chuyển đổi role sang tiếng Việt
@@ -72,7 +76,7 @@ const TopBar = ({ inFor, role, avatar }) => {
                         {/* Dropdown Menu */}
                         {dropdownOpen && (
                             <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <button onClick={handleProfile} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     Hồ sơ của tôi
                                 </button>
                                 <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
