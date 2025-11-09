@@ -15,10 +15,19 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getApplicationDetail } from "../../services/applicationService";
+import { getJobDetailByIdForUser } from "../../services/jobService";
+import RatingModal from "../../components/User/RatingModal";
 
 export default function ApplicationDetail({ id, onBack }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [ratingModal, setRatingModal] = useState({
+    isOpen: false,
+    jobId: null,
+    jobTitle: null,
+    employerId: null,
+    employerName: null
+  });
 
   const loadApplicationDetail = useCallback(async () => {
     if (!id) {
@@ -85,6 +94,64 @@ export default function ApplicationDetail({ id, onBack }) {
       hour: "2-digit",
       minute: "2-digit"
     });
+  };
+
+  const handleOpenRating = async () => {
+    if (!app) return;
+
+    let employerId = app.employerId;
+    let employerName = app.companyName || app.employerName;
+
+    // Nếu chưa có employerId, lấy từ job detail
+    if (!employerId && app.jobId) {
+      try {
+        const jobResponse = await getJobDetailByIdForUser(app.jobId);
+        const jobData = jobResponse?.data?.data || jobResponse?.data;
+        if (jobData?.employer?.id) {
+          employerId = jobData.employer.id;
+        }
+        if (!employerName && jobData?.employer?.fullName) {
+          employerName = jobData.employer.fullName;
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin job:", error);
+      }
+    }
+
+    setRatingModal({
+      isOpen: true,
+      jobId: app.jobId,
+      jobTitle: app.jobTitle,
+      employerId: employerId,
+      employerName: employerName
+    });
+  };
+
+  const handleRatingSuccess = () => {
+    // Reload chi tiết sau khi đánh giá thành công
+    loadApplicationDetail();
+  };
+
+  // Kiểm tra xem có thể đánh giá không
+  const canRate = () => {
+    if (!app) return false;
+    return (
+      app.statusJob === "CLOSED" &&
+      (app.status === "ACCEPTED" || app.status === "REJECTED") &&
+      app.jobId
+    );
+  };
+
+  // Map jobStatus từ backend sang tiếng Việt
+  const getJobStatusLabel = (statusJob) => {
+    const statusMap = {
+      PENDING: { label: "Chờ duyệt", color: "bg-yellow-100 text-yellow-600" },
+      APPROVED: { label: "Đã duyệt", color: "bg-green-100 text-green-600" },
+      REJECTED: { label: "Từ chối", color: "bg-red-100 text-red-600" },
+      CLOSED: { label: "Đã đóng", color: "bg-gray-100 text-gray-600" },
+      OPEN: { label: "Đang mở", color: "bg-blue-100 text-blue-600" }
+    };
+    return statusMap[statusJob] || { label: statusJob || "N/A", color: "bg-gray-100 text-gray-600" };
   };
 
 
@@ -176,6 +243,17 @@ export default function ApplicationDetail({ id, onBack }) {
           >
             {statusInfo.label}
           </span>
+          {app.statusJob && (() => {
+            const jobStatusInfo = getJobStatusLabel(app.statusJob);
+            return (
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${jobStatusInfo.color}`}
+                title="Trạng thái công việc"
+              >
+                {jobStatusInfo.label}
+              </span>
+            );
+          })()}
           {app.appliedAt && (
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
               Đã nộp: {formatDate(app.appliedAt)}
@@ -286,18 +364,28 @@ export default function ApplicationDetail({ id, onBack }) {
           </button>
 
           <div className="flex gap-3">
-
-            {app.status === "ACCEPTED" && (
+            {canRate() && (
               <button
-                onClick={() => alert('⭐ Cảm ơn bạn đã đánh giá!')}
+                onClick={handleOpenRating}
                 className="px-4 py-2 rounded-lg text-white text-sm bg-gradient-to-r from-pink-500 to-cyan-500 hover:opacity-95 flex items-center gap-1"
               >
-                <Star size={16} /> Đánh giá công việc
+                <Star size={16} className="fill-white" /> Đánh giá công việc
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={ratingModal.isOpen}
+        onClose={() => setRatingModal({ isOpen: false, jobId: null, jobTitle: null, employerId: null, employerName: null })}
+        jobTitle={ratingModal.jobTitle}
+        jobId={ratingModal.jobId}
+        employerId={ratingModal.employerId}
+        employerName={ratingModal.employerName}
+        onSuccess={handleRatingSuccess}
+      />
     </div>
   );
 }

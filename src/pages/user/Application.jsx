@@ -13,9 +13,12 @@ import {
   MoreVertical,
   Trash2,
   Search,
+  Star,
 } from "lucide-react";
 import { getMyApplications, cancelApplication } from "../../services/applicationService";
 import { createConversation } from "../../services/chatService";
+import { getJobDetailByIdForUser } from "../../services/jobService";
+import RatingModal from "../../components/User/RatingModal";
 
 export default function Application({ onViewDetail, onStartChat }) {
   const [applications, setApplications] = useState([]);
@@ -29,6 +32,13 @@ export default function Application({ onViewDetail, onStartChat }) {
     totalPages: 0,
     pageSize: 10,
     totalElements: 0
+  });
+  const [ratingModal, setRatingModal] = useState({
+    isOpen: false,
+    jobId: null,
+    jobTitle: null,
+    employerId: null,
+    employerName: null
   });
 
   useEffect(() => {
@@ -91,6 +101,18 @@ export default function Application({ onViewDetail, onStartChat }) {
     return statusMap[status] || { label: status, color: "bg-gray-100 text-gray-600" };
   };
 
+  // Map jobStatus từ backend sang tiếng Việt
+  const getJobStatusLabel = (statusJob) => {
+    const statusMap = {
+      PENDING: { label: "Chờ duyệt", color: "bg-yellow-100 text-yellow-600" },
+      APPROVED: { label: "Đã duyệt", color: "bg-green-100 text-green-600" },
+      REJECTED: { label: "Từ chối", color: "bg-red-100 text-red-600" },
+      CLOSED: { label: "Đã đóng", color: "bg-gray-100 text-gray-600" },
+      OPEN: { label: "Đang mở", color: "bg-blue-100 text-blue-600" }
+    };
+    return statusMap[statusJob] || { label: statusJob || "N/A", color: "bg-gray-100 text-gray-600" };
+  };
+
   // Map jobType từ backend sang tiếng Việt
   const getJobTypeLabel = (jobType) => {
     const typeMap = {
@@ -148,6 +170,60 @@ export default function Application({ onViewDetail, onStartChat }) {
       console.error("Lỗi khi hủy đơn ứng tuyển:", error);
       alert(error?.response?.data?.message || "Không thể hủy đơn ứng tuyển. Vui lòng thử lại.");
     }
+  };
+
+  const handleOpenRating = async (app) => {
+    let employerId = app.employerId;
+    let employerName = app.companyName || app.employerName;
+
+    // Nếu chưa có employerId, lấy từ job detail
+    if (!employerId && app.jobId) {
+      try {
+        const jobResponse = await getJobDetailByIdForUser(app.jobId);
+        const jobData = jobResponse?.data?.data || jobResponse?.data;
+        if (jobData?.employer?.id) {
+          employerId = jobData.employer.id;
+        }
+        if (!employerName && jobData?.employer?.fullName) {
+          employerName = jobData.employer.fullName;
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin job:", error);
+      }
+    }
+
+    setRatingModal({
+      isOpen: true,
+      jobId: app.jobId,
+      jobTitle: app.jobTitle,
+      employerId: employerId,
+      employerName: employerName
+    });
+  };
+
+  const handleRatingSuccess = () => {
+    // Reload danh sách sau khi đánh giá thành công
+    loadApplications(pagination.currentPage, pagination.pageSize);
+  };
+
+  // Kiểm tra xem có thể đánh giá không
+  const canRate = (app) => {
+    const canRateResult = (
+      app.statusJob === "CLOSED" &&
+      (app.status === "ACCEPTED" || app.status === "REJECTED") &&
+      app.jobId
+    );
+    // Debug log (có thể xóa sau)
+    if (app.statusJob === "CLOSED") {
+      console.log("Application có thể đánh giá:", {
+        applicationId: app.id,
+        statusJob: app.statusJob,
+        status: app.status,
+        jobId: app.jobId,
+        canRate: canRateResult
+      });
+    }
+    return canRateResult;
   };
 
   const handleSearch = (e) => {
@@ -275,6 +351,17 @@ export default function Application({ onViewDetail, onStartChat }) {
                       >
                         {statusInfo.label}
                       </span>
+                      {app.statusJob && (() => {
+                        const jobStatusInfo = getJobStatusLabel(app.statusJob);
+                        return (
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${jobStatusInfo.color}`}
+                            title="Trạng thái công việc"
+                          >
+                            {jobStatusInfo.label}
+                          </span>
+                        );
+                      })()}
                       {app.jobType && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                           {getJobTypeLabel(app.jobType)}
@@ -302,6 +389,15 @@ export default function Application({ onViewDetail, onStartChat }) {
                       className="px-4 py-2 border rounded-lg flex items-center gap-1 hover:bg-gray-100 whitespace-nowrap"
                     >
                       <MessageSquare size={16} /> Nhắn tin
+                    </button>
+                  )}
+                  {canRate(app) && (
+                    <button
+                      onClick={() => handleOpenRating(app)}
+                      className="px-4 py-2 rounded-lg flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-sm whitespace-nowrap font-medium"
+                      title="Đánh giá công việc và nhà tuyển dụng"
+                    >
+                      <Star size={16} className="fill-white text-white" /> Đánh giá
                     </button>
                   )}
 
@@ -358,6 +454,17 @@ export default function Application({ onViewDetail, onStartChat }) {
           </button>
         </div>
       )}
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={ratingModal.isOpen}
+        onClose={() => setRatingModal({ isOpen: false, jobId: null, jobTitle: null, employerId: null, employerName: null })}
+        jobTitle={ratingModal.jobTitle}
+        jobId={ratingModal.jobId}
+        employerId={ratingModal.employerId}
+        employerName={ratingModal.employerName}
+        onSuccess={handleRatingSuccess}
+      />
     </div>
   );
 }

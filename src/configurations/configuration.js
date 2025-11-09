@@ -80,3 +80,8 @@ export const CHAT = {
     CREATE_VERSATION: "/chat/conversations/create",
     SEARCH_CONVERSATIONS: "/chat/conversations/search",
 }
+
+export const RATING = {
+    CREATE_RATING: "/jobmate/ratings",
+    GET_RATINGS: "/jobmate/ratings/user",
+}

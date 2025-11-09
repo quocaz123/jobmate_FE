@@ -401,7 +401,7 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
             )}
 
             {activeTab === "reviews" && (
-              <ReviewsTab reviews={profile.reviews} />
+              <ReviewsTab userId={userInfo?.id || profile?.id} />
             )}
           </div>
         </div>
