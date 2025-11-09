@@ -21,7 +21,7 @@ const UserPage = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <Dashboard />;
+        return <Dashboard onGoToJobRequest={() => setActiveTab('job-requests')} />;
       case 'find-jobs':
         return (
           <JobList

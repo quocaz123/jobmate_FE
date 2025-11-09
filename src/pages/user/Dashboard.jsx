@@ -1,231 +1,177 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Briefcase,
   MessageSquare,
   Star,
   TrendingUp,
-  DollarSign,
-  Calendar,
-  Eye,
+  ArrowRight,
+  Sparkles,
+  Search,
   X,
+  MapPin,
+  DollarSign,
+  Building2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function Dashboard() {
-  const [applications, setApplications] = useState([]);
-  const [profile, setProfile] = useState({
-    personalInfo: true,
-    skills: true,
-    certificates: false,
-    projects: false,
-  });
-  const [selectedApp, setSelectedApp] = useState(null); // modal
+export default function Dashboard({ onGoToJobRequest }) {
+  const navigate = useNavigate();
+  const [showJobModal, setShowJobModal] = useState(null);
+  const [toast, setToast] = useState(false);
 
-  useEffect(() => {
-    // giả lập gọi API sau 1s
-    const timer = setTimeout(() => {
-      setApplications([
-        {
-          id: 1,
-          company: "Tech Startup ABC",
-          position: "Frontend Developer Intern",
-          status: "Đang chờ",
-          color: "bg-yellow-100 text-yellow-800",
-          date: "2025-10-15",
-          salary: "8-12 triệu/tháng",
-        },
-        {
-          id: 2,
-          company: "Marketing Agency XYZ",
-          position: "Content Creator",
-          status: "Phỏng vấn",
-          color: "bg-blue-100 text-blue-800",
-          date: "2025-10-10",
-          salary: "6-8 triệu/tháng",
-        },
-        {
-          id: 3,
-          company: "E-commerce Platform",
-          position: "Customer Service",
-          status: "Được nhận",
-          color: "bg-green-100 text-green-800",
-          date: "2025-10-05",
-          salary: "5-7 triệu/tháng",
-        },
-      ]);
-    }, 1000);
+  const stats = [
+    { icon: <Briefcase className="text-cyan-600" />, label: "Đơn ứng tuyển", value: 3 },
+    { icon: <MessageSquare className="text-pink-500" />, label: "Tin nhắn", value: 5 },
+    { icon: <Star className="text-yellow-500" />, label: "Đánh giá", value: "4.5 ★" },
+    { icon: <TrendingUp className="text-green-500" />, label: "Tiến độ hồ sơ", value: "85%" },
+  ];
 
-    return () => clearTimeout(timer);
-  }, []);
+  const jobSuggestions = [
+    { id: 1, title: "Nhân viên bán hàng", company: "Cửa hàng 24h", salary: "6-8 triệu/tháng", location: "Quận 1" },
+    { id: 2, title: "Thực tập sinh Marketing", company: "Agency XYZ", salary: "Thoả thuận", location: "Remote" },
+    { id: 3, title: "Nhân viên phục vụ", company: "Nhà hàng SushiGo", salary: "25k/giờ", location: "Quận 7" },
+  ];
 
-  // ------------------ TÍNH TOÁN ------------------
-  const totalApplications = applications.length;
-  const interviewCount = applications.filter(
-    (a) => a.status === "Phỏng vấn"
-  ).length;
-  const acceptedCount = applications.filter(
-    (a) => a.status === "Được nhận"
-  ).length;
-  const rating = 4.8;
-
-  const totalProfileItems = Object.keys(profile).length;
-  const completedItems = Object.values(profile).filter(Boolean).length;
-  const progress = Math.round((completedItems / totalProfileItems) * 100);
-
-  // ------------------ HÀM CẬP NHẬT ------------------
-  const toggleCertificate = () => {
-    setProfile((prev) => ({
-      ...prev,
-      certificates: !prev.certificates,
-    }));
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(false), 1800);
   };
 
+  function handleGoToJobRequest() {
+    if (typeof onGoToJobRequest === "function") {
+      onGoToJobRequest();
+    } else {
+      navigate("/user?tab=job-requests", { replace: false });
+    }
+  }
+
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <main className="p-6 space-y-6 transition-all duration-300">
-        {/* ----- THỐNG KÊ ----- */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-6 bg-white border rounded-lg flex gap-2 items-center shadow-sm">
-            <Briefcase className="text-cyan-600" />
-            <div>
-              <p className="text-2xl font-bold">{totalApplications}</p>
-              <p className="text-sm text-gray-500">Đã ứng tuyển</p>
-            </div>
-          </div>
-          <div className="p-6 bg-white border rounded-lg flex gap-2 items-center shadow-sm">
-            <MessageSquare className="text-pink-600" />
-            <div>
-              <p className="text-2xl font-bold">{interviewCount}</p>
-              <p className="text-sm text-gray-500">Phỏng vấn</p>
-            </div>
-          </div>
-          <div className="p-6 bg-white border rounded-lg flex gap-2 items-center shadow-sm">
-            <Star className="text-yellow-500" />
-            <div>
-              <p className="text-2xl font-bold">{rating}</p>
-              <p className="text-sm text-gray-500">Đánh giá</p>
-            </div>
-          </div>
-          <div className="p-6 bg-white border rounded-lg flex gap-2 items-center shadow-sm">
-            <TrendingUp className="text-green-500" />
-            <div>
-              <p className="text-2xl font-bold">{progress}%</p>
-              <p className="text-sm text-gray-500">Hồ sơ hoàn thiện</p>
-            </div>
-          </div>
+    <div className="p-6 bg-gray-50 min-h-screen space-y-8 relative overflow-hidden">
+      {/* toast */}
+      {toast && (
+        <div className="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+          ✅ {toast}
         </div>
+      )}
 
-        {/* ----- ỨNG TUYỂN GẦN ĐÂY ----- */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <h2 className="text-lg font-bold mb-2">Ứng tuyển gần đây</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Theo dõi trạng thái các đơn ứng tuyển của bạn
-          </p>
+      {/* header */}
+      <div className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white p-6 rounded-xl shadow-md">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Sparkles size={22} /> Chào mừng bạn đến với JobMate!
+        </h1>
+        <p className="text-white/90 mt-1">
+          Cùng bắt đầu hành trình tìm việc phù hợp ngay hôm nay ✨
+        </p>
+      </div>
 
-          {applications.length === 0 ? (
-            <p className="text-gray-400 italic">Đang tải dữ liệu...</p>
-          ) : (
-            <div className="space-y-3">
-              {applications.map((app) => (
-                <div
-                  key={app.id}
-                  className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50 transition"
-                >
-                  <div>
-                    <h3 className="font-medium">{app.position}</h3>
-                    <p className="text-sm text-gray-500">{app.company}</p>
-                    <div className="flex gap-4 mt-1 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <DollarSign size={14} />
-                        {app.salary}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        {app.date}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-3 py-1 text-sm rounded-full ${app.color}`}
-                    >
-                      {app.status}
-                    </span>
-                    <button
-                      onClick={() => setSelectedApp(app)}
-                      className="p-2 border rounded hover:bg-gray-100"
-                    >
-                      <Eye size={16} />
-                    </button>
+      {/* stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {stats.map((s, i) => (
+          <div
+            key={i}
+            className="bg-white p-5 border rounded-xl shadow-sm flex items-center gap-3 hover:shadow-md transition-all"
+          >
+            <div className="p-3 bg-gray-100 rounded-lg">{s.icon}</div>
+            <div>
+              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-sm text-gray-500">{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* job suggestions */}
+      <div className="bg-white p-6 rounded-xl border shadow-sm">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Search size={18} className="text-cyan-600" /> Việc làm gợi ý cho bạn
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {jobSuggestions.map((job) => (
+            <div
+              key={job.id}
+              className="border p-4 rounded-lg hover:shadow-md transition cursor-pointer relative"
+            >
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-cyan-50 rounded-md">
+                  <Building2 size={20} className="text-cyan-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800">{job.title}</h3>
+                  <p className="text-sm text-gray-500">{job.company}</p>
+                  <div className="flex items-center gap-3 text-sm text-gray-600 mt-2">
+                    <MapPin size={14} className="text-cyan-500" /> <span>{job.location}</span>
+                    <DollarSign size={14} className="text-pink-500" /> <span>{job.salary}</span>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="mt-4 flex justify-between items-center">
+                <button
+                  onClick={() => setShowJobModal(job)}
+                  className="text-sm text-cyan-600 flex items-center gap-1 hover:underline"
+                >
+                  Xem chi tiết <ArrowRight size={14} />
+                </button>
+                <button
+                  onClick={() => showToast("Đã lưu công việc!")}
+                  className="text-gray-400 hover:text-pink-500 transition"
+                >
+                  Lưu
+                </button>
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      </div>
+
+      {/* CTA tạo yêu cầu tìm việc */}
+      <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col md:flex-row items-center gap-4">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold">
+            Bạn đã sẵn sàng tạo yêu cầu tìm việc?
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Hãy mô tả nhanh nhu cầu công việc (vị trí, kỹ năng, địa điểm) —
+            chúng tôi sẽ gợi ý việc phù hợp cho bạn.
+          </p>
         </div>
 
-        {/* ----- HỒ SƠ HOÀN THIỆN ----- */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <h2 className="text-lg font-bold mb-2">Hoàn thiện hồ sơ</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Hồ sơ hoàn thiện giúp bạn có cơ hội được tuyển dụng cao hơn
-          </p>
-
-          {/* Thanh tiến độ */}
-          <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium text-gray-700">
-              Tiến độ hoàn thiện
-            </span>
-            <span className="text-sm font-medium text-gray-700">{progress}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-            <div
-              className="bg-black h-2 rounded-full"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-
-          {/* Mốc hoàn thiện */}
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li>✅ Thông tin cá nhân đã hoàn thiện</li>
-            <li>✅ Kỹ năng đã cập nhật</li>
-            <li>
-              {profile.certificates ? "✅ Chứng chỉ đã thêm" : "⏳ Cần thêm chứng chỉ"}
-            </li>
-            <li>
-              {profile.projects ? "✅ Dự án đã hoàn thiện" : "⏳ Cần thêm dự án"}
-            </li>
-          </ul>
-
+        <div className="flex gap-3">
           <button
-            onClick={toggleCertificate}
-            className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700"
+            onClick={handleGoToJobRequest}
+            className="px-5 py-3 bg-gradient-to-r from-pink-500 to-cyan-500 text-white rounded-lg font-medium hover:opacity-95 transition"
           >
-            Cập nhật chứng chỉ
+            Tạo yêu cầu tìm việc
           </button>
         </div>
-      </main>
+      </div>
 
-      {/* ----- MODAL XEM CHI TIẾT ----- */}
-      {selectedApp && (
+      {/* modal job detail */}
+      {showJobModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96 relative">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-96 relative">
             <button
-              onClick={() => setSelectedApp(null)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => setShowJobModal(null)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-black"
             >
               <X size={20} />
             </button>
-            <h2 className="text-lg font-bold mb-2">{selectedApp.position}</h2>
-            <p className="text-sm text-gray-600 mb-2">{selectedApp.company}</p>
-            <p>
-              💰 <strong>Lương:</strong> {selectedApp.salary}
+            <h2 className="text-xl font-bold mb-2">{showJobModal.title}</h2>
+            <p className="text-gray-600">{showJobModal.company}</p>
+            <p className="mt-2 text-sm">💰 Lương: {showJobModal.salary}</p>
+            <p className="mt-3 text-gray-700 text-sm">
+              Mô tả: Cơ hội tuyệt vời để phát triển trong môi trường năng động.
             </p>
-            <p>
-              📅 <strong>Ngày nộp:</strong> {selectedApp.date}
-            </p>
-            <p>
-              📌 <strong>Trạng thái:</strong> {selectedApp.status}
-            </p>
+            <button
+              onClick={() => {
+                setShowJobModal(null);
+                showToast("Ứng tuyển/ Lưu công việc!");
+              }}
+              className="mt-4 bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700"
+            >
+              Ứng tuyển ngay
+            </button>
           </div>
         </div>
       )}
