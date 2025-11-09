@@ -4,6 +4,7 @@ import { adminMenuItems } from '../../utils/menuConfig';
 import AdminDashboard from '../../components/admin/AdminDashboard';
 import UsersManagement from '../../components/admin/UsersManagement';
 import EmployersManagement from '../../components/admin/EmployersManagement';
+import PostsManagement from '../../components/admin/PostsManagement';
 import Statistics from '../../components/admin/Statistics';
 import SystemSettings from '../../components/admin/SystemSettings';
 import Security from '../../components/admin/Security';
@@ -13,8 +14,8 @@ const AdminOverview = () => {
     return <AdminDashboard />;
 };
 
-const AdminPage = () => {
-    const [activeTab, setActiveTab] = useState('overview');
+const AdminPage = ({ initialTab = 'overview' }) => {
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     const renderContent = () => {
         switch (activeTab) {
@@ -22,6 +23,8 @@ const AdminPage = () => {
                 return <AdminOverview />;
             case 'users':
                 return <UsersManagement />;
+            case 'posts':
+                return <PostsManagement />;
             case 'employers':
                 return <EmployersManagement />;
             case 'statistics':

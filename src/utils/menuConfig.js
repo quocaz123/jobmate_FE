@@ -29,6 +29,7 @@ export const adminMenuItems = [
     { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
     { id: 'users', label: 'Quản lý người dùng', icon: Users },
     { id: 'employers', label: 'Quản lý nhà tuyển dụng', icon: Building2 },
+    { id: 'posts', label: 'Quản lý bài viết', icon: FileText },
     { id: 'statistics', label: 'Thống kê', icon: BarChart3 },
     { id: 'settings', label: 'Cài đặt hệ thống', icon: Settings },
     { id: 'security', label: 'Bảo mật', icon: Shield },

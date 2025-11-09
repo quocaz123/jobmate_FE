@@ -2,8 +2,9 @@ import React from "react";
 import { ChevronLeft, LayoutDashboard, Briefcase, ClipboardList, Send, MessageSquare, Calendar, FileText, ShieldCheck, Home, Settings, LogOut } from 'lucide-react';
 
 const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSidebarOpen, logo, logoText }) => {
+    
     return (
-        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-sm border-r border-gray-200 transition-all duration-300 flex flex-col h-screen`}>
+    <div className={`${sidebarOpen ? 'w-64' : 'w-20'} sticky top-0 bg-white shadow-sm border-r border-gray-200 transition-all duration-300 flex flex-col h-screen`}>
             {/* Header */}
             <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -78,7 +79,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
             </nav>
 
             {/* Bottom Navigation */}
-            <div className="border-t border-gray-200 px-3 py-4 space-y-1">
+            <div className="border-t border-gray-200 px-3 py-4 space-y-1 mt-auto">
                 <button
                     onClick={() => setActiveTab('home-page')}
                     className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-gray-100 transition-colors"

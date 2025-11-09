@@ -33,6 +33,7 @@ const AppRoutes = () => {
                 {/* Admin Routes */}
                 <Route element={<ProtectRoute allowedRoles={["ROLE_ADMIN"]} />}>
                     <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/admin/posts" element={<AdminPage initialTab="posts" />} />
                 </Route>
 
                 {/* REDIRECT DEFAULT */}

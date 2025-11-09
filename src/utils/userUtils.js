@@ -6,8 +6,8 @@ export const getUserInfo = () => {
     try {
         const token = getToken();
         if (!token) return null;
-        const decoded = jwtDecode(token);
-        const userRoles = decoded.scope?.split(" ") || [];
+    const decoded = jwtDecode(token);
+    const userRoles = decoded.scope?.split(" ") || [];
         const isAdmin = userRoles.includes("ROLE_ADMIN");
         const isEmployer = userRoles.includes("ROLE_EMPLOYER") || userRoles.some(r => r.includes("EMPLOYER"));
 
