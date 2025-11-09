@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   MapPin,
   Clock,
@@ -8,10 +8,10 @@ import {
   Filter,
   MoreVertical,
   List as ListIcon,
-  Bookmark as BookmarkIcon,
 } from "lucide-react";
 import { getNearbyJobs } from "../../services/jobService";
 import ApplicationModal from "../../components/User/ApplicationModal";
+import ReportModal from "../../components/User/ReportModal";
 
 function companyInitials(name) {
   if (!name) return "CC";
@@ -44,11 +44,14 @@ function tagClass(tag) {
 
 export default function JobList({ onViewDetail, userInfo }) {
   const [query, setQuery] = useState("");
-  const [bookmarks, setBookmarks] = useState({});
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
+  const dropdownRefs = useRef({});
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -105,8 +108,36 @@ export default function JobList({ onViewDetail, userInfo }) {
       );
   }, [query, jobs]);
 
-  function toggleBookmark(id) {
-    setBookmarks((prev) => ({ ...prev, [id]: !prev[id] }));
+  // Đóng dropdown khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      Object.keys(dropdownRefs.current).forEach((jobId) => {
+        const ref = dropdownRefs.current[jobId];
+        if (ref && !ref.contains(event.target)) {
+          setOpenDropdownId(null);
+        }
+      });
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  function toggleDropdown(jobId) {
+    setOpenDropdownId(openDropdownId === jobId ? null : jobId);
+  }
+
+  function handleReport(job) {
+    const jobId = job.id || job.job_id || job.jobId;
+    setReportTarget({
+      targetType: "JOB",
+      targetId: jobId,
+      targetTitle: job.title
+    });
+    setOpenDropdownId(null);
+    setShowReportModal(true);
   }
 
   function handleApply(job) {
@@ -170,15 +201,27 @@ export default function JobList({ onViewDetail, userInfo }) {
                   key={jobId}
                   className="bg-white p-5 rounded-2xl shadow-sm border relative hover:-translate-y-1 hover:shadow-lg transition"
                 >
-                  <button
-                    onClick={() => toggleBookmark(jobId)}
-                    className="absolute right-4 top-4 p-2 rounded-md hover:bg-gray-100 transition"
-                  >
-                    <BookmarkIcon
-                      size={18}
-                      className={bookmarks[jobId] ? "text-pink-500" : "text-gray-400"}
-                    />
-                  </button>
+                  <div className="absolute right-4 top-4" ref={(el) => (dropdownRefs.current[jobId] = el)}>
+                    <button
+                      onClick={() => toggleDropdown(jobId)}
+                      className="p-2 rounded-md hover:bg-gray-100 transition"
+                    >
+                      <MoreVertical
+                        size={18}
+                        className="text-gray-400"
+                      />
+                    </button>
+                    {openDropdownId === jobId && (
+                      <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                        <button
+                          onClick={() => handleReport(job)}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors rounded-lg"
+                        >
+                          Báo cáo
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex items-start gap-4">
                     <div
@@ -290,6 +333,20 @@ export default function JobList({ onViewDetail, userInfo }) {
           jobTitle={selectedJob.title}
           userInfo={userInfo}
           jobId={selectedJob.id || selectedJob.job_id || selectedJob.jobId}
+        />
+      )}
+
+      {/* Report Modal */}
+      {reportTarget && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
+          }}
+          targetType={reportTarget.targetType}
+          targetId={reportTarget.targetId}
+          targetTitle={reportTarget.targetTitle}
         />
       )}
     </div>

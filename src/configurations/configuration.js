@@ -85,3 +85,7 @@ export const RATING = {
     CREATE_RATING: "/jobmate/ratings",
     GET_RATINGS: "/jobmate/ratings/user",
 }
+
+export const REPORT = {
+    CREATE_REPORT: "/jobmate/reports",
+}
