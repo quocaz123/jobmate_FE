@@ -6,9 +6,9 @@ import SignupPage from "../pages/auth/SignUp";
 import MockLogin from "../pages/auth/MockLogin";
 import ProtectRoute from "./ProtectedRoute";
 import Unauthorized from "../pages/auth/Unauthorized";
-import UserPage from "../pages/UserPage";
-import EmployerPage from "../pages/EmployerPage";
-import AdminPage from "../pages/AdminPage";
+import UserPage from "../pages/user/UserPage";
+import EmployerPage from "../pages/employer/EmployerPage";
+import AdminPage from "../pages/admin/AdminPage";
 
 const AppRoutes = () => {
     return (

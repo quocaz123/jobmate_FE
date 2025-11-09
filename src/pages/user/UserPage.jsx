@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import DashboardLayout from '../layouts/DashboardLayout';
-import { getUserInfo } from '../utils/userUtils';
-import { userMenuItems } from '../utils/menuConfig';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { getUserInfo } from '../../utils/userUtils';
+import { userMenuItems } from '../../utils/menuConfig';
 
 // Component cho Overview
 const UserOverview = () => {
