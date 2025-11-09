@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import NotificationBell from './NotificationBell';
+import { logout } from '../../services/authService';
+import { removeToken } from '../../services/localStorageService';
 
 const TopBar = ({ inFor, role, avatar }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -16,6 +18,12 @@ const TopBar = ({ inFor, role, avatar }) => {
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+    const handleLogout =  () => {
+        logout();
+        removeToken();
+        window.location.href = '/login';
+    }
 
     // Chuyển đổi role sang tiếng Việt
     const getRoleText = (role) => {
@@ -71,7 +79,7 @@ const TopBar = ({ inFor, role, avatar }) => {
                                     Cài đặt
                                 </button>
                                 <hr className="my-2" />
-                                <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                     Đăng xuất
                                 </button>
                             </div>

@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { handleAuthSuccess } from "../../services/authHandler";
 
 export default function Authenticate() {
-    const navigate = useNavigate()
-    useEffect(() => {
+  const navigate = useNavigate()
+  useEffect(() => {
     console.log(window.location.href);
 
     const authCodeRegex = /code=([^&]+)/;
@@ -24,21 +24,28 @@ export default function Authenticate() {
         })
         .then((data) => {
           console.log(data);
-          const token = data?.data?.token;
+          const responseData = data?.data;
+          const token = responseData?.token;
+
+          // Lưu toàn bộ response vào localStorage để UserPage có thể check
+          if (responseData) {
+            localStorage.setItem('authResponse', JSON.stringify(responseData));
+          }
+
           handleAuthSuccess(token, navigate);
         });
     }
   }, []);
 
-    return (
-        <div className="flex flex-col gap-8 justify-center items-center h-screen bg-gradient-to-br from-blue-500/5 via-gray-50 to-purple-500/5">
-            {/* Loading Spinner */}
-            <div className="relative">
-                <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            </div>
+  return (
+    <div className="flex flex-col gap-8 justify-center items-center h-screen bg-gradient-to-br from-blue-500/5 via-gray-50 to-purple-500/5">
+      {/* Loading Spinner */}
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
 
-            {/* Loading Text */}
-            <p className="text-lg text-gray-700 font-medium">Authenticating...</p>
-        </div>
-    )
+      {/* Loading Text */}
+      <p className="text-lg text-gray-700 font-medium">Authenticating...</p>
+    </div>
+  )
 }
