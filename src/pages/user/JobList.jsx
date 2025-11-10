@@ -53,12 +53,15 @@ export default function JobList({ onViewDetail, userInfo }) {
   const [reportTarget, setReportTarget] = useState(null);
   const dropdownRefs = useRef({});
 
+  // Debug: Log state changes
+  useEffect(() => {
+  }, [showReportModal, reportTarget]);
+
   useEffect(() => {
     const loadJobs = async () => {
       setLoading(true);
       try {
         const res = await getNearbyJobs();
-        console.log(res);
         const list = res?.data?.data?.data || res?.data?.data || [];
         setJobs(list);
       } catch (err) {
@@ -110,33 +113,54 @@ export default function JobList({ onViewDetail, userInfo }) {
 
   // Đóng dropdown khi click bên ngoài
   useEffect(() => {
+    // Không thêm listener nếu không có dropdown nào mở
+    if (openDropdownId === null) return;
+
     const handleClickOutside = (event) => {
-      Object.keys(dropdownRefs.current).forEach((jobId) => {
-        const ref = dropdownRefs.current[jobId];
-        if (ref && !ref.contains(event.target)) {
+      // Không đóng dropdown nếu đang mở modal
+      if (showReportModal) {
+        return;
+      }
+      const ref = dropdownRefs.current[openDropdownId];
+      if (ref) {
+        const isClickInside = ref.contains(event.target);
+        if (!isClickInside) {
           setOpenDropdownId(null);
         }
-      });
+      }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // Sử dụng setTimeout để đảm bảo click event của button được xử lý trước
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("click", handleClickOutside);
+    }, 0);
+
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      clearTimeout(timeoutId);
+      document.removeEventListener("click", handleClickOutside);
     };
-  }, []);
+  }, [openDropdownId, showReportModal]);
 
   function toggleDropdown(jobId) {
     setOpenDropdownId(openDropdownId === jobId ? null : jobId);
   }
 
   function handleReport(job) {
+   
     const jobId = job.id || job.job_id || job.jobId;
-    setReportTarget({
+    
+
+    // Đóng dropdown ngay lập tức
+    setOpenDropdownId(null);
+
+    // Set report target và mở modal
+    const reportData = {
       targetType: "JOB",
       targetId: jobId,
       targetTitle: job.title
-    });
-    setOpenDropdownId(null);
+    };
+
+    setReportTarget(reportData);
     setShowReportModal(true);
   }
 
@@ -212,9 +236,19 @@ export default function JobList({ onViewDetail, userInfo }) {
                       />
                     </button>
                     {openDropdownId === jobId && (
-                      <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                      <div
+                        className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
                         <button
-                          onClick={() => handleReport(job)}
+                          onClick={(e) => {
+                          
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReport(job);
+                          }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors rounded-lg"
                         >
                           Báo cáo
@@ -337,18 +371,22 @@ export default function JobList({ onViewDetail, userInfo }) {
       )}
 
       {/* Report Modal */}
-      {reportTarget && (
-        <ReportModal
-          isOpen={showReportModal}
-          onClose={() => {
-            setShowReportModal(false);
-            setReportTarget(null);
-          }}
-          targetType={reportTarget.targetType}
-          targetId={reportTarget.targetId}
-          targetTitle={reportTarget.targetTitle}
-        />
-      )}
+      {(() => {
+        const modalIsOpen = showReportModal && reportTarget !== null;
+      
+        return (
+          <ReportModal
+            isOpen={modalIsOpen}
+            onClose={() => {
+              setShowReportModal(false);
+              setReportTarget(null);
+            }}
+            targetType={reportTarget?.targetType}
+            targetId={reportTarget?.targetId}
+            targetTitle={reportTarget?.targetTitle}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { X, Check, AlertCircle } from "lucide-react";
 import { submitReport } from "../../services/reportService";
 
 const ReportModal = ({ isOpen, onClose, targetType, targetId, targetTitle }) => {
+    
     const [reason, setReason] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -43,8 +44,9 @@ const ReportModal = ({ isOpen, onClose, targetType, targetId, targetTitle }) => 
         }
     };
 
-    if (!isOpen) return null;
-
+    if (!isOpen) {
+        return null;
+    }
     const getTargetTypeLabel = () => {
         switch (targetType) {
             case "JOB":
