@@ -10,8 +10,7 @@ import Unauthorized from "../pages/auth/Unauthorized";
 import UserPage from "../pages/user/UserPage";
 import EmployerPage from "../pages/employer/EmployerPage";
 import AdminPage from "../pages/admin/AdminPage";
-import Overview from "../pages/Common/Overview";
-import Profile from "../pages/user/Profile";
+
 const AppRoutes = () => {
     return (
         <Router>
