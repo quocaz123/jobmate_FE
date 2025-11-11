@@ -1,29 +1,48 @@
 import React from "react";
+import { Loader2 } from "lucide-react";
 
-const TwoFactorTab = ({ twoFactorEnabled, setTwoFactorEnabled }) => {
+const TwoFactorTab = ({ twoFactorEnabled, isUpdating, onToggle }) => {
     return (
         <div>
-            <h3 className="font-semibold text-gray-800 mb-4">Xác thực hai yếu tố (2FA)</h3>
+            <h3 className="font-semibold text-gray-800 mb-4">
+                Xác thực hai yếu tố (2FA)
+            </h3>
             <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
-                        <h4 className="font-medium text-gray-800 mb-1">Bật xác thực hai yếu tố</h4>
+                        <h4 className="font-medium text-gray-800 mb-1">
+                            Bật xác thực hai yếu tố
+                        </h4>
                         <p className="text-sm text-gray-500">
-                            Tăng cường bảo mật tài khoản bằng cách yêu cầu mã xác thực từ ứng dụng di động
+                            Tăng cường bảo mật tài khoản bằng cách yêu cầu mã xác thực từ ứng
+                            dụng di động
                         </p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input
                             type="checkbox"
                             checked={twoFactorEnabled}
-                            onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                            onChange={(e) => onToggle(e.target.checked)}
                             className="sr-only peer"
+                            disabled={isUpdating}
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div
+                            className={`relative w-11 h-6 rounded-full transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
+                ${twoFactorEnabled ? "bg-blue-600 after:translate-x-full after:border-white" : "bg-gray-200"}
+                ${isUpdating ? "opacity-60 cursor-not-allowed" : "peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300"}
+              `}
+                        ></div>
                     </label>
                 </div>
 
-                {twoFactorEnabled && (
+                {isUpdating && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang cập nhật trạng thái 2FA...
+                    </div>
+                )}
+
+                {twoFactorEnabled && !isUpdating && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-sm text-blue-800 mb-2">
                             <strong>Hướng dẫn:</strong>
@@ -41,5 +60,3 @@ const TwoFactorTab = ({ twoFactorEnabled, setTwoFactorEnabled }) => {
 };
 
 export default TwoFactorTab;
-
-

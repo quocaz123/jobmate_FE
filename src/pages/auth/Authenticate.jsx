@@ -27,9 +27,14 @@ export default function Authenticate() {
           const responseData = data?.data;
           const token = responseData?.token;
 
-          // Lưu toàn bộ response vào localStorage để UserPage có thể check
-          if (responseData) {
-            localStorage.setItem('authResponse', JSON.stringify(responseData));
+          // // Lưu toàn bộ response vào localStorage để UserPage có thể check
+          // if (responseData) {
+          //   localStorage.setItem('authResponse', JSON.stringify(responseData));
+          // }
+
+          // Nếu requiresPasswordSetup = true, lưu flag để UserPage hiển thị modal
+          if (responseData?.requiresPasswordSetup) {
+            localStorage.setItem('showPasswordSetup', 'true');
           }
 
           handleAuthSuccess(token, navigate);

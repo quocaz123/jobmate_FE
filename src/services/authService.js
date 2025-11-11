@@ -18,15 +18,15 @@ export const login = async (email, password) => {
 };
 
 export const oauth2_login = async (code) => {
-  return await httpClient.post(AUTH.OAUTH_AUTHENTICATION, null, {
-    params: { code },
-  });
+    return await httpClient.post(AUTH.OAUTH_AUTHENTICATION, null, {
+        params: { code },
+    });
 };
 
 export const isAuthenticated = () => {
-  return getToken();
+    return getToken();
 };
-    
+
 export const logout = async () => {
     const token = getToken();
     return await httpClient.post(AUTH.LOGOUT, {
@@ -34,17 +34,42 @@ export const logout = async () => {
     });
 };
 
-export const verify_otp = async (otp) => {
-    const userId = getUserIdFromToken();
+export const verify_otp = async ({ userId, otp }) => {
+    const resolvedUserId = userId ?? getUserIdFromToken();
+
+    if (!resolvedUserId) {
+        throw new Error("Thiếu userId khi xác thực OTP");
+    }
+
     return await httpClient.post(AUTH.VERIFY_OTP, {
-        userId: userId,
+        userId: resolvedUserId,
         otp: otp
     });
 };
 
-export const resend_otp = async () => {
-    const userId = getUserIdFromToken();
+export const resend_otp = async ({ userId }) => {
+    const resolvedUserId = userId ?? getUserIdFromToken();
+
+    if (!resolvedUserId) {
+        throw new Error("Thiếu userId khi yêu cầu gửi lại OTP");
+    }
+
     return await httpClient.post(AUTH.RESEND_OTP, {
-        userId: userId
+        userId: resolvedUserId
     });
+}
+
+export const setPassword = async ({ userId, password, confirmPassword }) => {
+    if (!userId) {
+        throw new Error("Thiếu userId khi gọi setPassword");
+    }
+
+    return await httpClient.post(`${AUTH.SET_PASSWORD}?userId=${userId}`, {
+        password: password,
+        confirmPassword: confirmPassword
+    });
+}
+
+export const register = async (data) => {
+    return await httpClient.post(AUTH.REGISTER, data);
 }

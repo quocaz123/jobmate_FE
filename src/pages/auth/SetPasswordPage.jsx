@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
-import httpClient from '../../configurations/httpClient';
-import { getToken } from '../../services/localStorageService';
+import { setPassword } from '../../services/authService';
+import { showSuccess, showError, showLoading, dismissLoading } from '../../utils/toast';
+
 
 const SetPasswordPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { userEmail, userName } = location.state || {};
+    const { userEmail, userName, userId } = location.state || {};
 
     const [formData, setFormData] = useState({
         password: '',
@@ -28,14 +29,17 @@ const SetPasswordPage = () => {
 
     const validatePassword = () => {
         if (formData.password.length < 8) {
+            showError('Mật khẩu phải có ít nhất 8 ký tự');
             setError('Mật khẩu phải có ít nhất 8 ký tự');
             return false;
         }
         if (formData.password.length > 50) {
+            showError('Mật khẩu không được vượt quá 50 ký tự');
             setError('Mật khẩu không được vượt quá 50 ký tự');
             return false;
         }
         if (formData.password !== formData.confirmPassword) {
+            showError('Mật khẩu xác nhận không khớp');
             setError('Mật khẩu xác nhận không khớp');
             return false;
         }
@@ -49,27 +53,35 @@ const SetPasswordPage = () => {
             return;
         }
 
+        const loadingToast = showLoading('Đang tạo mật khẩu...');
         setLoading(true);
         setError('');
 
         try {
-            const token = getToken();
-            const response = await httpClient.post('/auth/set-password', {
+            if (!userId) {
+                throw new Error('Không tìm thấy userId để tạo mật khẩu');
+            }
+
+            const response = await setPassword({
+                userId: userId,
                 password: formData.password,
                 confirmPassword: formData.confirmPassword
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
             });
 
-            if (response.data.success) {
-                // Redirect to dashboard or home
-                navigate(response.data.redirectUrl || '/user');
+            console.log('Set password response:', response);
+
+            if (response.data?.code === 1000) {
+                dismissLoading(loadingToast);
+                showSuccess('Tạo mật khẩu thành công! Đang chuyển hướng...');
+
+                const redirectUrl = response.data?.data?.redirectUrl || '/home';
+                setTimeout(() => navigate(redirectUrl), 1000);
             }
         } catch (err) {
-            console.error('Error setting password:', err);
-            setError(err.response?.data?.message || 'Có lỗi xảy ra khi tạo mật khẩu');
+            dismissLoading(loadingToast);
+            const errorMessage = err.response?.data?.message || 'Có lỗi xảy ra khi tạo mật khẩu';
+            showError(errorMessage);
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

@@ -2,14 +2,20 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, X } from 'lucide-react';
 
-const PasswordSetupModal = ({ isOpen, onClose, userEmail, userName }) => {
+
+const PasswordSetupModal = ({ isOpen, onClose, userEmail, userName, userId }) => {
     const navigate = useNavigate();
 
     if (!isOpen) return null;
 
     const handleSetupPassword = () => {
+        if (!userId) {
+            console.error('PasswordSetupModal: Missing userId when navigating to set password');
+            return;
+        }
+
         navigate('/set-password', {
-            state: { userEmail, userName }
+            state: { userEmail, userName, userId }
         });
         onClose();
     };
@@ -87,7 +93,7 @@ const PasswordSetupModal = ({ isOpen, onClose, userEmail, userName }) => {
                 </div>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 @keyframes fade-in {
                     from {
                         opacity: 0;

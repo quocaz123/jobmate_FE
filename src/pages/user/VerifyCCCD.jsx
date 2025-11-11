@@ -1,6 +1,9 @@
 // src/components/VerifyCCCD.jsx
 import React, { useRef, useState } from "react";
-import { Camera, UploadCloud, Trash2, CheckCircle, XCircle, Info } from "lucide-react";
+import { Camera, UploadCloud, Trash2, CheckCircle, XCircle, Info, Loader2 } from "lucide-react";
+import { uploadFile } from "../../services/uploadFileService";
+import { submitCCCDVerification } from "../../services/userService";
+import { showSuccess, showError, showLoading, dismissLoading } from "../../utils/toast";
 
 /*
   VerifyCCCD component
@@ -16,13 +19,15 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
 export default function VerifyCCCD({ onSubmit }) {
   // eslint-disable-next-line no-unused-vars
   const [step, setStep] = useState(1); // 1: front, 2: back, 3: review/sent
-  const [frontFile, setFrontFile] = useState(null);
-  const [backFile, setBackFile] = useState(null);
   const [frontPreview, setFrontPreview] = useState(null);
   const [backPreview, setBackPreview] = useState(null);
+  const [frontUrl, setFrontUrl] = useState(null);
+  const [backUrl, setBackUrl] = useState(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [uploadingFront, setUploadingFront] = useState(false);
+  const [uploadingBack, setUploadingBack] = useState(false);
 
   // Camera modal state
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -38,50 +43,115 @@ export default function VerifyCCCD({ onSubmit }) {
     return null;
   };
 
-  const fileToPreview = (file, cb) => {
-    const reader = new FileReader();
-    reader.onload = (e) => cb(e.target.result);
-    reader.readAsDataURL(file);
-  };
+  const fileToPreview = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-  // File input handlers
-  const handleFileInput = (e, target) => {
-    setError("");
-    const file = e.target.files?.[0];
+  const uploadImage = async (file, target) => {
+    const isFront = target === "front";
+    const description = isFront ? "mặt trước" : "mặt sau";
+
     const fail = validateFile(file);
     if (fail) {
       setError(fail);
-      return;
+      return false;
     }
-    if (target === "front") {
-      setFrontFile(file);
-      fileToPreview(file, setFrontPreview);
-      setStep(2); // unlock back after front selected
+
+    if (!isFront && !frontUrl) {
+      setError("Bạn phải tải lên hoặc chụp mặt trước trước.");
+      return false;
+    }
+
+    setError("");
+    setSuccess(false);
+
+    let preview = null;
+    try {
+      preview = await fileToPreview(file);
+    } catch {
+      setError("Không thể xem trước ảnh. Vui lòng thử lại.");
+      return false;
+    }
+
+    const toastId = showLoading(`Đang tải ảnh ${description}...`);
+    if (isFront) {
+      setUploadingFront(true);
     } else {
-      if (!frontFile) {
-        setError("Bạn phải tải lên hoặc chụp mặt trước trước.");
-        return;
-      }
-      setBackFile(file);
-      fileToPreview(file, setBackPreview);
-      setStep(3);
+      setUploadingBack(true);
     }
+
+    try {
+      const url = await uploadFile(file, isFront ? "CCCD_FRONT" : "CCCD_BACK");
+
+      if (isFront) {
+        setFrontPreview(preview);
+        setFrontUrl(url);
+        // Reset mặt sau nếu mặt trước thay đổi
+        setBackPreview(null);
+        setBackUrl(null);
+        setStep(2);
+      } else {
+        setBackPreview(preview);
+        setBackUrl(url);
+        setStep(3);
+      }
+
+      showSuccess(`Tải ảnh ${description} thành công!`);
+      return true;
+    } catch (err) {
+      console.error(`Upload ảnh ${description} thất bại:`, err);
+      const message =
+        err?.response?.data?.message ||
+        `Tải ảnh ${description} thất bại. Vui lòng thử lại.`;
+      setError(message);
+      showError(message);
+      if (isFront) {
+        setFrontPreview(null);
+        setFrontUrl(null);
+      } else {
+        setBackPreview(null);
+        setBackUrl(null);
+      }
+      return false;
+    } finally {
+      dismissLoading(toastId);
+      if (isFront) {
+        setUploadingFront(false);
+      } else {
+        setUploadingBack(false);
+      }
+    }
+  };
+
+  // File input handlers
+  const handleFileInput = async (e, target) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadImage(file, target);
+    // Cho phép chọn lại cùng một tệp
+    e.target.value = "";
   };
 
   // Clear helpers
   const clearFront = () => {
-    setFrontFile(null);
     setFrontPreview(null);
-    setBackFile(null);
+    setFrontUrl(null);
     setBackPreview(null);
+    setBackUrl(null);
     setStep(1);
     setError("");
+    setSuccess(false);
   };
   const clearBack = () => {
-    setBackFile(null);
     setBackPreview(null);
+    setBackUrl(null);
     setStep(2);
     setError("");
+    setSuccess(false);
   };
 
   // Camera functions
@@ -118,49 +188,45 @@ export default function VerifyCCCD({ onSubmit }) {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
       // convert blob to file-like object
       const file = new File([blob], `${captureTarget}-${Date.now()}.png`, { type: "image/png" });
-      const fail = validateFile(file);
-      if (fail) {
-        setError(fail);
-        return;
+      const successUpload = await uploadImage(file, captureTarget);
+      if (successUpload) {
+        closeCamera();
       }
-      if (captureTarget === "front") {
-        setFrontFile(file);
-        fileToPreview(file, setFrontPreview);
-        setStep(2);
-      } else {
-        if (!frontFile) {
-          setError("Bạn phải chụp/tải lên mặt trước trước.");
-          return;
-        }
-        setBackFile(file);
-        fileToPreview(file, setBackPreview);
-        setStep(3);
-      }
-      closeCamera();
     }, "image/png", 0.9);
   };
 
   // Submit (simulate)
   const handleSubmit = async () => {
     setError("");
-    if (!frontFile || !backFile) {
-      setError("Cần cả mặt trước và mặt sau để gửi xác minh.");
+    setSuccess(false);
+    if (!frontUrl || !backUrl) {
+      setError("Cần tải lên cả mặt trước và mặt sau trước khi gửi xác minh.");
       return;
     }
     setSending(true);
+    const loadingToast = showLoading("Đang gửi yêu cầu xác minh...");
     try {
-      // simulate upload delay
-      await new Promise((r) => setTimeout(r, 1500));
+      const response = await submitCCCDVerification();
+      if (onSubmit) {
+        await Promise.resolve(onSubmit());
+      }
       setSuccess(true);
       setStep(3);
-      if (onSubmit) onSubmit({ frontFile, backFile });
-    } catch {
-      setError("Gửi thất bại. Thử lại.");
+      showSuccess(response?.data?.message || "Đã gửi yêu cầu xác minh CCCD!");
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Gửi xác minh thất bại. Vui lòng thử lại.";
+      setError(message);
+      showError(message);
     } finally {
       setSending(false);
+      dismissLoading(loadingToast);
     }
   };
 
@@ -169,7 +235,8 @@ export default function VerifyCCCD({ onSubmit }) {
       <h2 className="text-2xl font-semibold mb-2">Xác minh CCCD</h2>
       <p className="text-sm text-gray-500 mb-4">
         Vui lòng tải lên hoặc chụp <b>mặt trước</b> trước, sau đó mới tải lên/chụp <b>mặt sau</b>.
-        Hệ thống chấp nhận ảnh JPG/PNG, tối đa 5MB.
+        Mỗi khi bạn chọn ảnh, hệ thống sẽ tải lên ngay để lưu trữ an toàn (định dạng JPG/PNG, tối đa 5MB).
+        Khi cả hai mặt đã được tải thành công, nút <b>Gửi xác minh</b> sẽ xuất hiện.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -180,7 +247,16 @@ export default function VerifyCCCD({ onSubmit }) {
               <Camera className="w-5 h-5 text-gray-600" />
               <h3 className="font-medium">Mặt trước (Ảnh CMND/CCCD)</h3>
             </div>
-            {frontFile && <span className="text-sm text-green-600 flex items-center gap-1"><CheckCircle className="w-4 h-4" />Đã có</span>}
+            {uploadingFront && (
+              <span className="text-sm text-blue-500 flex items-center gap-1">
+                <Loader2 className="w-4 h-4 animate-spin" /> Đang tải...
+              </span>
+            )}
+            {!uploadingFront && frontUrl && (
+              <span className="text-sm text-green-600 flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" /> Đã tải
+              </span>
+            )}
           </div>
 
           {frontPreview ? (
@@ -192,20 +268,35 @@ export default function VerifyCCCD({ onSubmit }) {
           )}
 
           <div className="flex gap-2">
-            <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-md cursor-pointer hover:bg-gray-50">
+            <label
+              className={`inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-md cursor-pointer hover:bg-gray-50 ${uploadingFront ? "pointer-events-none opacity-60" : ""
+                }`}
+            >
               <UploadCloud className="w-4 h-4" /> Tải lên
-              <input type="file" accept="image/*" onChange={(e) => handleFileInput(e, "front")} className="hidden" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileInput(e, "front")}
+                className="hidden"
+                disabled={uploadingFront}
+              />
             </label>
 
             <button
               onClick={() => openCamera("front")}
-              className="px-3 py-2 bg-white border rounded-md hover:bg-gray-50 inline-flex items-center gap-2"
+              className={`px-3 py-2 bg-white border rounded-md hover:bg-gray-50 inline-flex items-center gap-2 ${uploadingFront ? "opacity-60 pointer-events-none" : ""
+                }`}
+              disabled={uploadingFront}
             >
               <Camera className="w-4 h-4" /> Chụp ảnh
             </button>
 
-            {frontFile && (
-              <button onClick={clearFront} className="ml-auto px-3 py-2 bg-red-50 text-red-600 border rounded-md inline-flex items-center gap-2">
+            {frontUrl && (
+              <button
+                onClick={clearFront}
+                className="ml-auto px-3 py-2 bg-red-50 text-red-600 border rounded-md inline-flex items-center gap-2"
+                disabled={uploadingFront || uploadingBack}
+              >
                 <Trash2 className="w-4 h-4" /> Xóa
               </button>
             )}
@@ -213,13 +304,22 @@ export default function VerifyCCCD({ onSubmit }) {
         </div>
 
         {/* Back card */}
-        <div className={`border rounded-lg p-4 ${!frontFile ? "opacity-60" : ""}`}>
+        <div className={`border rounded-lg p-4 ${!frontUrl ? "opacity-60" : ""}`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Camera className="w-5 h-5 text-gray-600" />
               <h3 className="font-medium">Mặt sau (Ảnh phản biện)</h3>
             </div>
-            {backFile && <span className="text-sm text-green-600 flex items-center gap-1"><CheckCircle className="w-4 h-4" />Đã có</span>}
+            {uploadingBack && (
+              <span className="text-sm text-blue-500 flex items-center gap-1">
+                <Loader2 className="w-4 h-4 animate-spin" /> Đang tải...
+              </span>
+            )}
+            {!uploadingBack && backUrl && (
+              <span className="text-sm text-green-600 flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" /> Đã tải
+              </span>
+            )}
           </div>
 
           {backPreview ? (
@@ -228,25 +328,40 @@ export default function VerifyCCCD({ onSubmit }) {
             </div>
           ) : (
             <div className="mb-3 bg-gray-50 p-6 rounded-md text-center text-gray-400">
-              {frontFile ? "Chưa có ảnh mặt sau" : "Vui lòng tải lên mặt trước trước"}
+              {frontUrl ? "Chưa có ảnh mặt sau" : "Vui lòng tải lên mặt trước trước"}
             </div>
           )}
 
           <div className="flex gap-2">
-            <label className={`inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-md cursor-pointer hover:bg-gray-50 ${!frontFile ? "pointer-events-none opacity-50" : ""}`}>
+            <label
+              className={`inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-md cursor-pointer hover:bg-gray-50 ${!frontUrl || uploadingBack || uploadingFront ? "pointer-events-none opacity-50" : ""
+                }`}
+            >
               <UploadCloud className="w-4 h-4" /> Tải lên
-              <input type="file" accept="image/*" onChange={(e) => handleFileInput(e, "back")} className="hidden" disabled={!frontFile} />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileInput(e, "back")}
+                className="hidden"
+                disabled={!frontUrl || uploadingBack || uploadingFront}
+              />
             </label>
 
             <button
-              onClick={() => (frontFile ? openCamera("back") : setError("Bạn cần mặt trước trước"))}
-              className={`px-3 py-2 bg-white border rounded-md hover:bg-gray-50 inline-flex items-center gap-2 ${!frontFile ? "opacity-50 pointer-events-none" : ""}`}
+              onClick={() => (frontUrl ? openCamera("back") : setError("Bạn cần tải lên mặt trước trước"))}
+              className={`px-3 py-2 bg-white border rounded-md hover:bg-gray-50 inline-flex items-center gap-2 ${!frontUrl || uploadingBack || uploadingFront ? "opacity-50 pointer-events-none" : ""
+                }`}
+              disabled={!frontUrl || uploadingBack || uploadingFront}
             >
               <Camera className="w-4 h-4" /> Chụp ảnh
             </button>
 
-            {backFile && (
-              <button onClick={clearBack} className="ml-auto px-3 py-2 bg-red-50 text-red-600 border rounded-md inline-flex items-center gap-2">
+            {backUrl && (
+              <button
+                onClick={clearBack}
+                className="ml-auto px-3 py-2 bg-red-50 text-red-600 border rounded-md inline-flex items-center gap-2"
+                disabled={uploadingBack}
+              >
                 <Trash2 className="w-4 h-4" /> Xóa
               </button>
             )}
@@ -261,23 +376,38 @@ export default function VerifyCCCD({ onSubmit }) {
         </div>
       )}
 
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          onClick={handleSubmit}
-          disabled={sending || !frontFile || !backFile}
-          className="px-5 py-2 rounded-md bg-teal-600 text-white disabled:opacity-60"
-        >
-          {sending ? "Đang gửi..." : "Gửi xác minh"}
-        </button>
+      <div className="mt-4 space-y-3">
+        {frontUrl && backUrl ? (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSubmit}
+              disabled={sending || uploadingFront || uploadingBack}
+              className="px-5 py-2 rounded-md bg-teal-600 text-white disabled:opacity-60"
+            >
+              {sending ? "Đang gửi..." : "Gửi xác minh"}
+            </button>
 
-        <button onClick={clearFront} className="px-4 py-2 border rounded-md bg-white">
-          Làm lại
-        </button>
+            <button
+              onClick={clearFront}
+              className="px-4 py-2 border rounded-md bg-white"
+              disabled={sending || uploadingFront || uploadingBack}
+            >
+              Làm lại
+            </button>
 
-        <div className="ml-auto text-sm text-gray-500 flex items-center gap-2">
-          <Info className="w-4 h-4" />
-          Hệ thống sẽ bảo mật dữ liệu — dùng ảnh thật, không che/đậy.
-        </div>
+            <div className="ml-auto text-sm text-gray-500 flex items-center gap-2">
+              <Info className="w-4 h-4" />
+              Hệ thống sẽ bảo mật dữ liệu — dùng ảnh thật, không che/đậy.
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            <Info className="mt-0.5 w-4 h-4" />
+            <span>
+              Vui lòng tải lên đủ <b>mặt trước</b> và <b>mặt sau</b> của CCCD. Sau khi cả hai ảnh được tải thành công, bạn sẽ có thể gửi yêu cầu xác minh.
+            </span>
+          </div>
+        )}
       </div>
 
       {success && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { getUserInfo } from '../../services/userService';
 import { userMenuItems } from '../../utils/menuConfig';
+import PasswordSetupModal from '../../components/Common/PasswordSetupModal';
 import Dashboard from './Dashboard';
 import JobList from './JobList';
 import JobListDetail from './JobListDetail';
@@ -18,6 +19,33 @@ const UserPage = () => {
     const [selectedJobId, setSelectedJobId] = useState(null);
     const [userInfo, setUserInfo] = useState(null);
     const [avatarUrl, setAvatarUrl] = useState(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordSetupData, setPasswordSetupData] = useState(null);
+
+    // Kiểm tra xem có cần hiển thị modal setup password không
+    useEffect(() => {
+        const showSetup = localStorage.getItem('showPasswordSetup');
+        const authResponseStr = localStorage.getItem('authResponse');
+
+        if (showSetup === 'true' && authResponseStr) {
+            try {
+                const authResponse = JSON.parse(authResponseStr);
+                if (authResponse?.requiresPasswordSetup) {
+                    setPasswordSetupData({
+                        userEmail: authResponse.userEmail,
+                        userName: authResponse.userName || authResponse.userEmail,
+                        userId: authResponse.userId
+                    });
+                    setShowPasswordModal(true);
+
+                    // Xóa flag sau khi đã hiển thị
+                    localStorage.removeItem('showPasswordSetup');
+                }
+            } catch (error) {
+                console.error('Error parsing authResponse:', error);
+            }
+        }
+    }, []);
 
     useEffect(() => {
         const loadUserInfo = async () => {
@@ -114,16 +142,29 @@ const UserPage = () => {
     };
 
     return (
-        <DashboardLayout
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            menuItems={userMenuItems}
-            logo="/vite.svg"
-            logoText="JobMate"
-            avatarUrl={avatarUrl}
-        >
-            {renderContent()}
-        </DashboardLayout>
+        <>
+            <DashboardLayout
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                menuItems={userMenuItems}
+                logo="/vite.svg"
+                logoText="JobMate"
+                avatarUrl={avatarUrl}
+            >
+                {renderContent()}
+            </DashboardLayout>
+
+            {/* Modal setup password cho Google OAuth users */}
+            {showPasswordModal && passwordSetupData && (
+                <PasswordSetupModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    userEmail={passwordSetupData.userEmail}
+                    userName={passwordSetupData.userName}
+                    userId={passwordSetupData.userId}
+                />
+            )}
+        </>
     );
 };
 

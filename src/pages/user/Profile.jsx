@@ -9,6 +9,8 @@ import {
   ClipboardList,
   Percent,
   Camera,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import InfoTab from "./ProfileTabs/InfoTab";
 import TwoFactorTab from "./ProfileTabs/TwoFactorTab";
@@ -16,7 +18,8 @@ import VerifyCCCDTab from "./ProfileTabs/VerifyCCCDTab";
 import ReviewsTab from "./ProfileTabs/ReviewsTab";
 import CareerInfoTab from "./ProfileTabs/CareerInfoTab";
 import { uploadFile } from "../../services/uploadFileService";
-import { updateUserInfo } from "../../services/userService";
+import { getUserInfo, updateUserInfo, updateTwoFactorStatus } from "../../services/userService";
+import { showSuccess, showError } from "../../utils/toast";
 
 // Dữ liệu mẫu (thay bằng API sau)
 const MOCK_USER = {
@@ -79,14 +82,23 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
   const [avatarError, setAvatarError] = useState(false);
   const [activeTab, setActiveTab] = useState("info"); // "info", "2fa", "verify", "reviews"
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
 
   useEffect(() => {
     console.log("Received userInfo:", userInfo);
     if (userInfo) {
+      const initialTwoFa =
+        userInfo.twoFaEnabled ??
+        userInfo.twoFactorEnabled ??
+        userInfo.isTwoFaEnabled ??
+        false;
+
       setProfile({
-        ...MOCK_USER,  // fallback nếu thiếu field
-        ...userInfo,   // dữ liệu thực từ API ưu tiên hơn
+        ...MOCK_USER, // fallback nếu thiếu field
+        ...userInfo, // dữ liệu thực từ API ưu tiên hơn
       });
+
+      setTwoFactorEnabled(Boolean(initialTwoFa));
     }
     setAvatarError(false);
   }, [userInfo]);
@@ -128,7 +140,82 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
   const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("vi-VN");
 
-  const isVerified = profile?.verificationStatus === "VERIFIED";
+  const verificationStatusRaw =
+    userInfo?.verificationStatus || profile?.verificationStatus || "UNVERIFIED";
+  const verificationStatus = verificationStatusRaw.toUpperCase();
+
+  const VERIFICATION_BADGES = {
+    VERIFIED: {
+      label: "Đã xác minh",
+      className: "bg-green-100 text-green-700 border border-green-200",
+      icon: CheckCircle,
+    },
+    PENDING: {
+      label: "Đang chờ xác minh",
+      className: "bg-yellow-100 text-yellow-700 border border-yellow-200",
+      icon: Clock,
+    },
+    REJECTED: {
+      label: "Bị từ chối xác minh",
+      className: "bg-red-100 text-red-700 border border-red-200",
+      icon: XCircle,
+    },
+    UNVERIFIED: {
+      label: "Chưa xác minh",
+      className: "bg-gray-100 text-gray-600 border border-gray-200",
+      icon: AlertCircle,
+    },
+  };
+
+  const verificationBadge = VERIFICATION_BADGES[verificationStatus] || null;
+  const verificationReason =
+    userInfo?.verificationReason ||
+    profile?.verificationReason ||
+    userInfo?.verificationNote ||
+    profile?.verificationNote ||
+    userInfo?.verificationMessage ||
+    profile?.verificationMessage ||
+    userInfo?.verificationRemark ||
+    profile?.verificationRemark ||
+    "";
+
+  const handleToggleTwoFactor = async (targetState) => {
+    if (twoFactorLoading || targetState === twoFactorEnabled) {
+      return;
+    }
+
+    setTwoFactorLoading(true);
+    try {
+      const response = await updateTwoFactorStatus(targetState);
+      const enabledResponse =
+        response?.data?.enabled ??
+        response?.data?.data?.enabled ??
+        targetState;
+      setTwoFactorEnabled(Boolean(enabledResponse));
+      setProfile((prev) =>
+        prev
+          ? {
+            ...prev,
+            twoFaEnabled: enabledResponse,
+            twoFactorEnabled: enabledResponse,
+          }
+          : prev
+      );
+      showSuccess(
+        response?.data?.message ||
+        (enabledResponse
+          ? "Đã bật xác thực hai yếu tố."
+          : "Đã tắt xác thực hai yếu tố.")
+      );
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Không thể cập nhật trạng thái 2FA. Vui lòng thử lại.";
+      showError(errorMessage);
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
 
   // Disable nút chỉnh sửa khi ở các tab không cho phép chỉnh sửa
   const isEditDisabled = ["2fa", "verify", "reviews"].includes(activeTab);
@@ -245,16 +332,14 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
 
             {/* Rating và Verification Bar */}
             <div className="flex flex-wrap items-center justify-center gap-3 mt-3 mb-3 px-2">
-              {isVerified && (
-                <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">
-                  <CheckCircle size={14} /> Đã xác minh
+              {verificationBadge && (
+                <span
+                  className={`${verificationBadge.className} text-xs px-3 py-1 rounded-full flex items-center gap-1`}
+                >
+                  <verificationBadge.icon size={14} /> {verificationBadge.label}
                 </span>
               )}
-              {profile.cccdVerified && (
-                <span className="bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">
-                  <CheckCircle size={14} /> CCCD đã xác thực
-                </span>
-              )}
+
               {profile.averageRating && profile.averageRating > 0 && (
                 <div className="flex items-center gap-1 text-sm">
                   <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
@@ -388,14 +473,38 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
             {activeTab === "2fa" && (
               <TwoFactorTab
                 twoFactorEnabled={twoFactorEnabled}
-                setTwoFactorEnabled={setTwoFactorEnabled}
+                isUpdating={twoFactorLoading}
+                onToggle={handleToggleTwoFactor}
               />
             )}
 
             {activeTab === "verify" && (
               <VerifyCCCDTab
-                onVerifySuccess={() => {
-                  setProfile((prev) => ({ ...prev, cccdVerified: true }));
+                verificationStatus={verificationStatus}
+                rejectionReason={verificationReason}
+                onVerifySuccess={async (nextStatus = "PENDING") => {
+                  setProfile((prev) => {
+                    if (!prev) return prev;
+                    const updatedProfile = {
+                      ...prev,
+                      verificationStatus: nextStatus,
+                      verificationReason: nextStatus === "PENDING" ? null : prev.verificationReason,
+                    };
+                    if (onProfileUpdate) {
+                      onProfileUpdate(updatedProfile);
+                    }
+                    return updatedProfile;
+                  });
+
+                  try {
+                    const refreshed = await getUserInfo();
+                    const latest = refreshed?.data?.data;
+                    if (latest) {
+                      setProfile((prev) => (prev ? { ...prev, ...latest } : latest));
+                    }
+                  } catch (error) {
+                    console.error("Không thể làm mới trạng thái xác minh:", error);
+                  }
                 }}
               />
             )}

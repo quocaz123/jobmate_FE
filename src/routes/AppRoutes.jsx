@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 import LoginPage from "../pages/auth/LoginPage";
 import Authenticate from "../pages/auth/Authenticate";
 import SignupPage from "../pages/auth/SignUp";
+import VerifyOtpPage from "../pages/auth/VerifyOtpPage";
 import MockLogin from "../pages/auth/MockLogin";
 import SetPasswordPage from "../pages/auth/SetPasswordPage";
 import ProtectRoute from "./ProtectedRoute";
@@ -19,6 +20,7 @@ const AppRoutes = () => {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/authenticate" element={<Authenticate />} />
+                <Route path="/verify-otp" element={<VerifyOtpPage />} />
                 <Route path="/mock-login" element={<MockLogin />} />
                 <Route path="/set-password" element={<SetPasswordPage />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />

@@ -4,6 +4,7 @@ import { OAuthConfig } from "../../configurations/configuration";
 import { login } from "../../services/authService";
 import { handleAuthSuccess } from "../../services/authHandler";
 import { useNavigate } from "react-router-dom";
+import { showError, showSuccess } from "../../utils/toast";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,19 +12,41 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await login(email, password);
-      console.log("login response:", res);
-      const token = res?.data.data?.token;
-      handleAuthSuccess(token, navigate);
-    } catch (error) {
-      console.error("Đăng nhập thất bại:", error);
-      alert("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await login(email, password);
+    const data = res.data.data;
+
+    // Nếu tài khoản bị cấm / khoá
+    if (data.status === "BANNED" || data.banned === true) {
+      showError("Tài khoản của bạn đã bị khóa do vi phạm quy định.");
       return;
     }
-  };
+
+    // Nếu bật xác thực 2FA (OTP)
+    if (data.twoFaEnabled) {
+      showSuccess("Vui lòng nhập mã OTP để tiếp tục");
+      navigate("/verify-otp", {
+        state: {
+          userId: data.userId,
+          otpExpiryTime: data.otpExpiryTime
+        }
+      });
+      return;
+    }
+
+    // Đăng nhập bình thường
+    showSuccess("Đăng nhập thành công!");
+    setTimeout(() => {
+      handleAuthSuccess(data.token, navigate);
+    }, 1200);
+
+  } catch (error) {
+    const msg = error.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";
+    showError(msg);
+  }
+};
 
   const handleGoogleLogin = () => {
     console.log("Google login clicked");

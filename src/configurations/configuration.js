@@ -16,6 +16,8 @@ export const AUTH = {
     VERIFY_OTP: "/jobmate/auth/verify-otp",
     RESEND_OTP: "/jobmate/auth/resend-otp",
     SET_PASSWORD: "/jobmate/auth/set-password",
+    REGISTER: "/jobmate/users/registration",
+    ENABLE_2FA: "/jobmate/users/two-fa",
 };
 
 export const USER = {
@@ -27,6 +29,8 @@ export const USER = {
     GET_USER_TOP10: "/jobmate/users/top-10",
     GET_LOCATION: "/jobmate/users/locations",
     AUTO_COMPLETE_LOCATION: "/jobmate/users/location/auto",
+    SET_PASSWORD: "/jobmate/auth/set-password",
+ 
 };
 
 export const NOTIFICATION = {
@@ -58,7 +62,7 @@ export const APPLICATION = {
 }
 
 export const VERIFY = {
-    VERIFY_CCCD: "/jobmate/verify/request"
+    VERIFY_CCCD: "/jobmate/users/verify/request"
 }
 
 export const UPLOAD = {
