@@ -22,7 +22,7 @@ export const AUTH = {
 
 export const USER = {
     GET_USER_INFO: "/jobmate/users/my-info",
-    GET_ALL_USERS: "/jobmate/users/",
+    GET_ALL_USERS: "/jobmate/users",
     UPDATE_USER: "/jobmate/users",
     GET_USER_DETAIL: (userId) => `/jobmate/users/${userId}`,
     GET_USER_TOPRATED: "/jobmate/users/top-rated",
@@ -30,13 +30,14 @@ export const USER = {
     GET_LOCATION: "/jobmate/users/locations",
     AUTO_COMPLETE_LOCATION: "/jobmate/users/location/auto",
     SET_PASSWORD: "/jobmate/auth/set-password",
- 
+
 };
 
 export const NOTIFICATION = {
     GET_NOTIFICATIONS: "/jobmate/notifications/me",
     MARK_AS_READ: (id) => `/jobmate/notifications/${id}/read`,
     CREATE_NOTIFICATION: "/jobmate/notifications",
+    DELETE_ALL: "/jobmate/notifications/me",
 };
 
 export const JOB = {
@@ -75,6 +76,14 @@ export const ADMIN = {
     APPROVE_CCCD: (userId) => `/jobmate/admin/verify/${userId}/approve`,
     GET_ALL_VERIFY_REQUESTS: "/jobmate/admin/verify/pedding",
     GET_VERIFY_DETAIL: (userId) => `/jobmate/admin/verify/pedding/${userId}/detail`,
+}
+
+export const VERIFICATION_ADMIN = {
+    // Admin - xác minh CCCD
+    GET_PENDING: "/jobmate/admin/verify/pending",
+    GET_DETAIL: (userId) => `/jobmate/admin/verify/pending/${userId}/detail`,
+    APPROVE: (userId) => `/jobmate/admin/verify/${userId}/approve`,
+    REJECT: (userId) => `/jobmate/admin/verify/${userId}/reject`,
 }
 
 export const CHAT = {

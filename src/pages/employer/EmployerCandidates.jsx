@@ -61,6 +61,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
 
       if (data) {
         // Map dữ liệu từ API sang format hiển thị
+        console.log("Ứng viên tải về:", data)
         const mapped = (data.data || []).map((app) => ({
           id: app.applicationId,
           applicationId: app.applicationId,

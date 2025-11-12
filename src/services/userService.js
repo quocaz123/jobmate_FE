@@ -17,3 +17,13 @@ export const submitCCCDVerification = async () => {
     return await httpClient.post(VERIFY.VERIFY_CCCD);
 }
 
+export const getAllUsers = async (page, size, status, role) => {
+    return await httpClient.get(USER.GET_ALL_USERS, {
+        params: {
+            page: page,
+            size: size,
+            status: status,
+            role: role
+        }
+    });
+}

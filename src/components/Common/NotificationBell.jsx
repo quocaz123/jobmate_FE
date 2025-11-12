@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
-import notificationService from '../../services/notificationService'; // ✅ import service chuẩn
+import notificationService from '../../services/notificationService'; // Đảm bảo đường dẫn đúng
 
 const NotificationBell = () => {
     const [open, setOpen] = useState(false);
@@ -9,74 +9,110 @@ const NotificationBell = () => {
     const [loading, setLoading] = useState(false);
     const dropdownRef = useRef(null);
 
-
+    // ===================== LOAD DANH SÁCH =====================
     const refreshList = async () => {
         try {
             setLoading(true);
             const response = await notificationService.getNotifications();
-            // API trả về {code, message, data}, response từ service đã là response.data
-            // Vậy response có cấu trúc {code, message, data}
-            const rawNotifications = response?.data || [];
+            console.log("🔔 Notifications API response:", response);
 
-            // Chuẩn hóa key để dùng thống nhất trong UI
+            // ✅ Đảm bảo lấy đúng data từ API
+            const rawNotifications = response?.data || [];
+            console.log("📋 Raw notifications:", rawNotifications.length, "items");
+            console.log("📋 First item read status:", rawNotifications[0]?.read);
+
             const notifications = rawNotifications
-                .map((n) => {
-                    const isRead = n?.read === true; // Đảm bảo boolean: chỉ true khi read === true
-                    return {
-                        id: n?.id,
-                        isRead: isRead,
-                        message: n?.message || '',
-                        title: n?.title || '',
-                        createdAt: n?.createdAt || n?.created_at,
-                    };
-                })
+                .map((n) => ({
+                    id: n?.id,
+                    isRead: Boolean(n?.read),
+                    title: n?.title || '',
+                    message: n?.message || '',
+                    createdAt: n?.createdAt || n?.created_at || '',
+                }))
                 .sort((a, b) => {
-                    // Sắp xếp: chưa đọc trước, sau đó theo thời gian mới nhất
-                    if (a.isRead !== b.isRead) {
-                        return a.isRead ? 1 : -1;
-                    }
+                    // Chưa đọc trước, sau đó sắp theo thời gian mới nhất
+                    if (a.isRead !== b.isRead) return a.isRead ? 1 : -1;
                     return new Date(b.createdAt) - new Date(a.createdAt);
                 });
 
+            console.log("✅ Processed notifications:", notifications.length);
+            console.log("📊 Unread count:", notifications.filter((n) => !n.isRead).length);
+
             setItems(notifications);
-            const unreadCount = notifications.filter((n) => !n.isRead).length;
-            setUnread(unreadCount);
+            setUnread(notifications.filter((n) => !n.isRead).length);
         } catch (error) {
-            console.error('Lỗi khi tải thông báo:', error);
+            console.error('❌ Lỗi khi tải thông báo:', error);
         } finally {
             setLoading(false);
         }
     };
 
-
+    // ===================== ĐÁNH DẤU ĐÃ ĐỌC =====================
     const handleRead = async (id) => {
         try {
-            await notificationService.markAsRead(id);
-            // Refresh lại danh sách từ API để đảm bảo đồng bộ với backend
-            await refreshList();
+            // ✅ Optimistic update - cập nhật UI ngay lập tức
+            setItems(prev => prev.map(n =>
+                n.id === id ? { ...n, isRead: true } : n
+            ));
+            setUnread(prev => Math.max(0, prev - 1));
+
+            console.log('🔔 Marking as read:', id);
+            const response = await notificationService.markAsRead(id);
+            console.log('✅ Mark as read response:', response);
+
+            // ⚠️ KHÔNG cần refreshList() vì backend không update đúng
+            // UI đã được update bằng optimistic update ở trên
         } catch (err) {
-            console.error('Lỗi khi đánh dấu đã đọc:', err);
+            console.error('❌ Lỗi khi đánh dấu đã đọc:', err);
+            // Rollback nếu lỗi - đặt lại thành chưa đọc
+            setItems(prev => prev.map(n =>
+                n.id === id ? { ...n, isRead: false } : n
+            ));
+            setUnread(prev => prev + 1);
         }
     };
-
 
     const handleReadAll = async () => {
         try {
-            await Promise.all(
-                items.filter((n) => !n.isRead).map((n) => notificationService.markAsRead(n.id))
-            );
-            // Refresh lại danh sách từ API để đảm bảo đồng bộ với backend
-            await refreshList();
+            const unreadItems = items.filter((n) => !n.isRead);
+            if (unreadItems.length === 0) return;
+
+            // ✅ Optimistic update
+            setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+            setUnread(0);
+
+            console.log('🔔 Marking all as read:', unreadItems.length, 'items');
+            await Promise.all(unreadItems.map((n) => notificationService.markAsRead(n.id)));
+            console.log('✅ All marked as read');
+
+            // ⚠️ KHÔNG cần refreshList() vì backend không update đúng
         } catch (err) {
-            console.error('Lỗi khi đánh dấu tất cả:', err);
+            console.error('❌ Lỗi khi đánh dấu tất cả:', err);
+            // Rollback nếu lỗi
+            await refreshList();
         }
     };
 
+    const handleDeleteAll = async () => {
+        if (!confirm('Bạn có chắc muốn xóa tất cả thông báo?')) return;
 
+        try {
+            // ✅ Optimistic update - xóa UI ngay
+            setItems([]);
+            setUnread(0);
+
+            console.log('🗑️ Deleting all notifications');
+            await notificationService.deleteAll();
+            console.log('✅ All notifications deleted');
+        } catch (err) {
+            console.error('❌ Lỗi khi xóa tất cả:', err);
+            // Rollback nếu lỗi
+            await refreshList();
+        }
+    };    // ===================== UI HANDLER =====================
     useEffect(() => {
         refreshList();
     }, []);
-
 
     useEffect(() => {
         const handler = (e) => {
@@ -88,13 +124,13 @@ const NotificationBell = () => {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-
     const toggleOpen = async () => {
         const next = !open;
         setOpen(next);
         if (next) await refreshList();
     };
 
+    // ===================== RENDER =====================
     return (
         <div className="relative" ref={dropdownRef}>
             <button
@@ -114,12 +150,23 @@ const NotificationBell = () => {
                 <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg border rounded-lg z-50">
                     <div className="flex items-center justify-between p-3 border-b">
                         <span className="font-semibold text-gray-700">Thông báo</span>
-                        <button
-                            onClick={handleReadAll}
-                            className="text-sm text-indigo-600 hover:underline"
-                        >
-                            Đánh dấu đã đọc tất cả
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleReadAll}
+                                className="text-xs text-indigo-600 hover:underline"
+                                disabled={unread === 0}
+                            >
+                                Đọc tất cả
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <button
+                                onClick={handleDeleteAll}
+                                className="text-xs text-red-600 hover:underline"
+                                disabled={items.length === 0}
+                            >
+                                Xóa tất cả
+                            </button>
+                        </div>
                     </div>
 
                     <div className="max-h-80 overflow-auto">
@@ -130,9 +177,7 @@ const NotificationBell = () => {
                                 ))}
                             </div>
                         ) : items.length === 0 ? (
-                            <div className="p-4 text-sm text-gray-500">
-                                Không có thông báo
-                            </div>
+                            <div className="p-4 text-sm text-gray-500">Không có thông báo</div>
                         ) : (
                             items.map((n) => (
                                 <button
@@ -149,16 +194,24 @@ const NotificationBell = () => {
                                         )}
                                         <div className="flex-1">
                                             {n.title && (
-                                                <p className={`text-sm font-medium ${n.isRead ? 'text-gray-700' : 'text-gray-900'}`}>
+                                                <p
+                                                    className={`text-sm font-medium ${n.isRead ? 'text-gray-700' : 'text-gray-900'
+                                                        }`}
+                                                >
                                                     {n.title}
                                                 </p>
                                             )}
-                                            <p className={`text-sm mt-1 ${n.isRead ? 'text-gray-600' : 'text-gray-800'}`}>
+                                            <p
+                                                className={`text-sm mt-1 ${n.isRead ? 'text-gray-600' : 'text-gray-800'
+                                                    }`}
+                                            >
                                                 {n.message}
                                             </p>
                                             <div className="mt-2 flex items-center justify-between">
                                                 <span className="text-xs text-gray-400">
-                                                    {n.createdAt?.replace('T', ' ').slice(0, 19) || ''}
+                                                    {n.createdAt
+                                                        ?.replace('T', ' ')
+                                                        .slice(0, 19) || ''}
                                                 </span>
                                                 {!n.isRead && (
                                                     <span className="text-xs text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">

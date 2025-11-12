@@ -14,6 +14,10 @@ const notificationService = {
         const response = await httpClient.post(NOTIFICATION.CREATE_NOTIFICATION, data);
         return response.data;
     },
+    deleteAll: async () => {
+        const response = await httpClient.delete(NOTIFICATION.DELETE_ALL);
+        return response.data;
+    },
 };
 
 export default notificationService;
