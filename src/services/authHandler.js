@@ -1,12 +1,13 @@
 import { setToken } from "./localStorageService";
 import { scheduleTokenRefresh } from "./tokenService";
 import { jwtDecode } from "jwt-decode";
+import { showSuccess } from "../utils/toast";
 
 export const handleAuthSuccess = (token, navigate, shouldNavigate = true) => {
-    if (!token) {
-        alert("Không nhận được token!");
-        return;
-    }
+    // if (!token) {
+    //     alert("Không nhận được token!");
+    //     return;
+    // }
 
     setToken(token);
     scheduleTokenRefresh();
@@ -18,9 +19,10 @@ export const handleAuthSuccess = (token, navigate, shouldNavigate = true) => {
     const decoded = jwtDecode(token);
     const roles = decoded.scope?.split(" ") || [];
 
-    alert("Đăng nhập thành công!");
-
-    if (roles.includes("ROLE_ADMIN")) navigate("/home");
-    else if (roles.includes("ROLE_EMPLOYER")) navigate("/employer/dashboard");
-    else navigate("/home");
+    showSuccess("Đăng nhập thành công!");
+    setTimeout(() => {
+        if (roles.includes("ROLE_ADMIN")) navigate("/home");
+        else if (roles.includes("ROLE_EMPLOYER")) navigate("/employer/dashboard");
+        else navigate("/home");
+    }, 2000);
 };

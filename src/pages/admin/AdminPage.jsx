@@ -4,11 +4,9 @@ import { adminMenuItems } from '../../utils/menuConfig';
 import AdminDashboard from '../../components/Admin/AdminDashboard';
 import UsersManagement from '../../components/Admin/UsersManagement';
 import EmployersManagement from '../../components/Admin/EmployersManagement';
-import Statistics from '../../components/Admin/Statistics';
-import SystemSettings from '../../components/Admin/SystemSettings';
-import Security from '../../components/Admin/Security';
 import ApplicantsManagement from './ApplicantsManagement';
 import VerificationCCCD from '../../components/Admin/VerificationCCCD';
+import JobReviewManagement from '../../components/Admin/JobReviewManagement';
 
 // Component cho Overview
 const AdminOverview = () => {
@@ -26,17 +24,13 @@ const AdminPage = () => {
                 return <UsersManagement />;
             case 'employers':
                 return <EmployersManagement />;
-            case 'statistics':
-                return <Statistics />;
+            case 'job-review':
+                return <JobReviewManagement />;
             case 'applicants':
                 // Tạm thời dùng UsersManagement cho tab Ứng viên (chưa có component riêng)
                 return <ApplicantsManagement />;
             case 'verifications':
                 return <VerificationCCCD />;
-            case 'settings':
-                return <SystemSettings />;
-            case 'security':
-                return <Security />;
             default:
                 return (
                     <div className="text-center py-12">

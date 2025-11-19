@@ -202,7 +202,6 @@ const EmployerPost = ({ mode = 'create', jobId = null, onDone }) => {
                             <option value="PART_TIME">Bán thời gian</option>
                             <option value="FULL_TIME">Toàn thời gian</option>
                             <option value="FREELANCE">Freelance</option>
-                            <option value="INTERNSHIP">Thực tập</option>
                         </select>
                     </div>
                 </div>

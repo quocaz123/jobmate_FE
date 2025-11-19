@@ -37,7 +37,6 @@ export default function LoginPage() {
     }
 
     // Đăng nhập bình thường
-    showSuccess("Đăng nhập thành công!");
     setTimeout(() => {
       handleAuthSuccess(data.token, navigate);
     }, 1200);

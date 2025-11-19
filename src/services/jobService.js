@@ -31,4 +31,20 @@ export const getAvailableJobs = async () => {
     return await httpClient.get(JOB.GET_AVAILABLE_JOBS);
 };
 
+export const getAllJobPeding = async (page, size) => {
+    return await httpClient.get(JOB.GET_ALL_JOB_PEDINGS, { params: { page, size } });
+}
+
+export const approveJob = async (jobId) => {
+    return await httpClient.put(JOB.VERIFY_JOB(jobId), null, { params: { status: 'APPROVED' } });
+}
+
+export const rejectJob = async (jobId, rejectionReason) => {
+    const params = { status: 'REJECTED' };
+    if (rejectionReason) {
+        params.reason = rejectionReason;
+    }
+    return await httpClient.put(JOB.VERIFY_JOB(jobId), null, { params });
+}
+
 

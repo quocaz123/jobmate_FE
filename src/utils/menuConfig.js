@@ -7,7 +7,6 @@ export const userMenuItems = [
     { id: 'job-requests', label: 'Yêu cầu tìm việc', icon: Sparkles },
     { id: 'applications', label: 'Ứng tuyển của tôi', icon: Send },
     { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
-    { id: 'schedule', label: 'Lịch làm việc', icon: Calendar },
     { id: 'profile', label: 'Hồ sơ', icon: User },
 ];
 
@@ -28,11 +27,12 @@ export const adminMenuItems = [
     { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
     { id: 'users', label: 'Quản lý người dùng', icon: Users },
     { id: 'employers', label: 'Quản lý nhà tuyển dụng', icon: Building2 },
+    { id: 'job-review', label: 'Duyệt công việc', icon: ClipboardList },
     { id: 'verifications', label: 'Xác minh CCCD', icon: Shield },
-    { id: 'statistics', label: 'Thống kê', icon: BarChart3 },
+    // { id: 'statistics', label: 'Thống kê', icon: BarChart3 },
     { id: 'applicants', label: 'Quản lý ứng viên', icon: FileText },
-    { id: 'settings', label: 'Cài đặt hệ thống', icon: Settings },
-    { id: 'security', label: 'Bảo mật', icon: Shield },
+    // { id: 'settings', label: 'Cài đặt hệ thống', icon: Settings },
+    // { id: 'security', label: 'Bảo mật', icon: Shield },
 ];
 
 // Lấy menu items dựa trên role

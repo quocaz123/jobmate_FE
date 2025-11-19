@@ -10,7 +10,6 @@ import Application from './Application';
 import ApplicationDetail from './ApplicationDetail';
 import JobRequest from './JobRequest';
 import Profile from './Profile';
-import WorkSchedule from './WorkSchedule';
 import MessagesPage from '../Common/MessagePage';
 
 const UserPage = () => {
@@ -119,8 +118,6 @@ const UserPage = () => {
                 );
             case 'messages':
                 return <MessagesPage />;
-            case 'schedule':
-                return <WorkSchedule events={[]} />;
             case 'profile':
                 return (
                     <Profile

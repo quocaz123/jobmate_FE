@@ -50,6 +50,7 @@ export const JOB = {
     GET_NEARBY_JOBS: "/jobmate/jobs/nearby",
     GET_MY_JOBS: "/jobmate/jobs/my-jobs",
     GET_AVAILABLE_JOBS: "/jobmate/jobs/available",
+    GET_ALL_JOB_PEDINGS: "/jobmate/jobs",
 }
 
 export const APPLICATION = {
@@ -101,4 +102,10 @@ export const RATING = {
 
 export const REPORT = {
     CREATE_REPORT: "/jobmate/reports",
+}
+
+export const WAITING_LIST = {
+    CREATE_WAITING_LIST: "/jobmate/waiting-list",
+    GET_MY_WAITING_LIST: "/jobmate/waiting-list/my-waiting",
+    DELETE_WAITING_LIST: (id) => `/jobmate/waiting-list/${id}`,
 }
