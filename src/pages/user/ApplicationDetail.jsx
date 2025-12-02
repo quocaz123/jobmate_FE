@@ -17,6 +17,7 @@ import {
 import { getApplicationDetail } from "../../services/applicationService";
 import { getJobDetailByIdForUser } from "../../services/jobService";
 import RatingModal from "../../components/User/RatingModal";
+import { formatWorkingDaysForDisplay } from "../../utils/scheduleUtils";
 
 export default function ApplicationDetail({ id, onBack }) {
   const [app, setApp] = useState(null);
@@ -182,7 +183,7 @@ export default function ApplicationDetail({ id, onBack }) {
   }
 
   const statusInfo = getStatusInfo(app.status);
-  const schedule = `${app.workingDays || ""}${app.workingHours ? ` • ${app.workingHours}` : ""}`;
+  const schedule = `${app.workingDays ? formatWorkingDaysForDisplay(app.workingDays) : ""}${app.workingHours ? ` • ${app.workingHours}` : ""}`;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">

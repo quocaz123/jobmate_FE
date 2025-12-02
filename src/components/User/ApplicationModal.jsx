@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { AlertCircle, FileText, Check, X } from "lucide-react";
 import { applyJob } from "../../services/applicationService";
 
@@ -32,6 +32,11 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
         resumeFileToSend = uploadedFile;
         useProfileResume = false;
       } else if (selectedResume === "profile") {
+        if (!hasResume) {
+          setIsSubmitting(false);
+          alert("Vui lòng tải lên CV trong hồ sơ trước khi sử dụng tùy chọn này.");
+          return;
+        }
         resumeFileToSend = null;
         useProfileResume = true;
       }
@@ -69,11 +74,23 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
     }
   };
 
-  if (!isOpen) return null;
-
   // ✅ Lấy thông tin resume từ userInfo
-  const profileResume = userInfo?.resume;
-  const hasResume = !!profileResume?.url;
+  const profileResume = userInfo?.resume || null;
+  const hasResume = Boolean(
+    profileResume &&
+    (profileResume.fileName || profileResume.id)
+  );
+
+  // ✅ useEffect phải được gọi trước early return để tuân thủ Rules of Hooks
+  useEffect(() => {
+    if (isOpen && hasResume) {
+      setSelectedResume("profile");
+    } else if (isOpen && !hasResume) {
+      setSelectedResume(null);
+    }
+  }, [isOpen, hasResume]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -124,12 +141,13 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
                 {hasResume ? (
                   <div
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedResume === "profile"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-blue-300"
                       }`}
-                    onClick={() =>
-                      setSelectedResume(selectedResume === "profile" ? null : "profile")
-                    }
+                    onClick={() => {
+                      if (!hasResume) return;
+                      setSelectedResume(selectedResume === "profile" ? null : "profile");
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <input
@@ -137,20 +155,24 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
                         name="resume"
                         value="profile"
                         checked={selectedResume === "profile"}
-                        onChange={() =>
-                          setSelectedResume(selectedResume === "profile" ? null : "profile")
-                        }
+                        onChange={() => {
+                          if (!hasResume) return;
+                          setSelectedResume(selectedResume === "profile" ? null : "profile");
+                        }}
                         className="mt-1"
                         onClick={(e) => e.stopPropagation()}
+                        disabled={!hasResume}
                       />
                       <div className="flex-1">
                         <p className="font-medium">Sử dụng CV từ hồ sơ</p>
                         <p className="text-sm text-gray-500 truncate">
-                          {profileResume?.url?.split("/").pop()}
+                          {profileResume?.fileName || "Chưa cập nhật tên tệp"}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           Cập nhật:{" "}
-                          {new Date(profileResume?.createdAt).toLocaleDateString("vi-VN")}
+                          {profileResume?.createdAt
+                            ? new Date(profileResume.createdAt).toLocaleDateString("vi-VN")
+                            : "Không xác định"}
                         </p>
                       </div>
                       {selectedResume === "profile" && (
@@ -159,16 +181,17 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm">
-                    Bạn chưa tải lên CV trong hồ sơ.
+                  <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 text-sm">
+                    Bạn chưa tải lên CV trong hồ sơ. Vui lòng cập nhật CV ở trang Hồ sơ trước
+                    khi sử dụng tùy chọn này.
                   </div>
                 )}
 
                 {/* Upload CV */}
                 <div
                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedResume === "upload"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-blue-300"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-blue-300"
                     }`}
                   onClick={(e) => {
                     if (e.target.type === "radio") return;

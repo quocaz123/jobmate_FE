@@ -18,6 +18,7 @@ import {
 import { getMyApplications, cancelApplication } from "../../services/applicationService";
 import { createConversation } from "../../services/chatService";
 import { getJobDetailByIdForUser } from "../../services/jobService";
+import { formatWorkingDaysForDisplay } from "../../utils/scheduleUtils";
 import RatingModal from "../../components/User/RatingModal";
 
 export default function Application({ onViewDetail, onStartChat }) {
@@ -105,10 +106,10 @@ export default function Application({ onViewDetail, onStartChat }) {
   const getJobStatusLabel = (statusJob) => {
     const statusMap = {
       PENDING: { label: "Chờ duyệt", color: "bg-yellow-100 text-yellow-600" },
-      APPROVED: { label: "Đã duyệt", color: "bg-green-100 text-green-600" },
+      APPROVED: { label: "Đang mở", color: "bg-green-100 text-green-600" },
       REJECTED: { label: "Từ chối", color: "bg-red-100 text-red-600" },
       CLOSED: { label: "Đã đóng", color: "bg-gray-100 text-gray-600" },
-      OPEN: { label: "Đang mở", color: "bg-blue-100 text-blue-600" }
+      
     };
     return statusMap[statusJob] || { label: statusJob || "N/A", color: "bg-gray-100 text-gray-600" };
   };
@@ -310,7 +311,7 @@ export default function Application({ onViewDetail, onStartChat }) {
         ) : (
           filteredApplications.map((app) => {
             const statusInfo = getStatusLabel(app.status);
-            const schedule = `${app.workingDays || ""}${app.workingHours ? ` • ${app.workingHours}` : ""}`;
+            const schedule = `${app.workingDays ? formatWorkingDaysForDisplay(app.workingDays) : ""}${app.workingHours ? ` • ${app.workingHours}` : ""}`;
 
             return (
               <div

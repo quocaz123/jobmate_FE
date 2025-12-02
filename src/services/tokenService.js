@@ -8,6 +8,9 @@ let refreshTimer = null;
 
 
 export const getTokenExpiry = (token) => {
+  if (!token || typeof token !== 'string') {
+    return null;
+  }
   try {
     const decoded = jwtDecode(token);
     if (!decoded.exp) return null;

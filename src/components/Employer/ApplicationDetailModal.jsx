@@ -1,6 +1,7 @@
 import React from 'react'
 import { X, MapPin, Mail, Phone, Download, List } from 'lucide-react'
 import { statusBadge, getStatusLabel, getJobTypeLabel, formatDate, initials } from '../../utils/candidateUtils'
+import { formatWorkingDaysForDisplay } from '../../utils/scheduleUtils'
 
 export default function ApplicationDetailModal({
     isOpen,
@@ -91,7 +92,7 @@ export default function ApplicationDetailModal({
                                         </div>
                                     )}
                                     {applicationDetail.workingDays && (
-                                        <div><span className="font-medium">Ngày làm việc:</span> {applicationDetail.workingDays}</div>
+                                        <div><span className="font-medium">Ngày làm việc:</span> {formatWorkingDaysForDisplay(applicationDetail.workingDays)}</div>
                                     )}
                                     {applicationDetail.workingHours && (
                                         <div><span className="font-medium">Giờ làm việc:</span> {applicationDetail.workingHours}</div>
@@ -125,7 +126,7 @@ export default function ApplicationDetailModal({
                                     )}
                                     {applicationDetail.matchScore && (
                                         <div>
-                                            <span className="font-medium">Điểm phù hợp:</span> {applicationDetail.matchScore.toFixed(1)}/10
+                                            <span className="font-medium">Điểm phù hợp:</span> {applicationDetail.matchScore.toFixed(1)}/100
                                         </div>
                                     )}
                                 </div>

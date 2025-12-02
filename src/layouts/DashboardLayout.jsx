@@ -29,10 +29,7 @@ const DashboardLayout = ({
     useEffect(() => {
         const initLocation = async () => {
             try {
-                const location = await initUserLocation();
-                if (location) {
-                    localStorage.setItem('userLocation', JSON.stringify(location));
-                }
+                await initUserLocation();
             } catch (err) {
                 console.warn('Không thể khởi tạo vị trí:', err);
             }
@@ -86,6 +83,7 @@ const DashboardLayout = ({
                     inFor={userInfo?.fullName || ''}
                     role={userInfo?.role || 'Student'}
                     avatar={avatarUrl}
+                    onTabChange={handleTabChange}
                 />
                 <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
                     {children}

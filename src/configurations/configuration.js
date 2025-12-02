@@ -16,6 +16,8 @@ export const AUTH = {
     VERIFY_OTP: "/jobmate/auth/verify-otp",
     RESEND_OTP: "/jobmate/auth/resend-otp",
     SET_PASSWORD: "/jobmate/auth/set-password",
+    FORGOT_PASSWORD: "/jobmate/auth/forgot-password",
+    RESET_PASSWORD: "/jobmate/auth/reset-password",
     REGISTER: "/jobmate/users/registration",
     ENABLE_2FA: "/jobmate/users/two-fa",
 };
@@ -30,7 +32,9 @@ export const USER = {
     GET_LOCATION: "/jobmate/users/locations",
     AUTO_COMPLETE_LOCATION: "/jobmate/users/location/auto",
     SET_PASSWORD: "/jobmate/auth/set-password",
-
+    UPDATE_PASSWORD: "/jobmate/users/password",
+    UPGRADE_ROLE: (userId) => `/jobmate/users/${userId}/upgrade-employer`,
+    UPDATE_USER_STATUS: (userId) => `/jobmate/admin/verify/${userId}/status`,
 };
 
 export const NOTIFICATION = {
@@ -44,6 +48,7 @@ export const JOB = {
     CREATE_JOB: "/jobmate/jobs",
     UPDATE_JOB: (jobId) => `/jobmate/jobs/${jobId}`,
     VERIFY_JOB: (jobId) => `/jobmate/jobs/${jobId}/verify-job`,
+    CLOSE_JOB: (jobId) => `/jobmate/jobs/${jobId}/close`,
     GET_JOBS: "/jobmate/jobs",
     GET_JOB_DETAIL: (jobId) => `/jobmate/jobs/${jobId}`,
     GET_JOB_DETAIL_BY_ID_FOR_USER: (jobId) => `/jobmate/jobs/details/${jobId}`,
@@ -51,6 +56,7 @@ export const JOB = {
     GET_MY_JOBS: "/jobmate/jobs/my-jobs",
     GET_AVAILABLE_JOBS: "/jobmate/jobs/available",
     GET_ALL_JOB_PEDINGS: "/jobmate/jobs",
+    DELETE_JOB: (jobId) => `/jobmate/jobs/${jobId}/delete`,
 }
 
 export const APPLICATION = {
@@ -87,6 +93,23 @@ export const VERIFICATION_ADMIN = {
     REJECT: (userId) => `/jobmate/admin/verify/${userId}/reject`,
 }
 
+export const AUDIT_LOG = {
+    GET_AUDIT_LOGS: "/jobmate/admin/audit-logs",
+    GET_STATS: "/jobmate/admin/audit-logs/stats",
+}
+
+export const ADMIN_DASHBOARD = {
+    SUMMARY: "/jobmate/admin/dashboard/summary",
+    SYSTEM_HEALTH: "/jobmate/admin/dashboard/system-health",
+    TOP_VIOLATIONS: "/jobmate/admin/dashboard/users/violations",
+}
+
+export const EMPLOYER_DASHBOARD = {
+    SUMMARY: "/jobmate/employer/dashboard/summary",
+    TOP_JOBS: "/jobmate/employer/dashboard/jobs/top",
+    RECENT_CANDIDATES: "/jobmate/employer/dashboard/candidates/recent",
+}
+
 export const CHAT = {
     GET_MY_CONVERSATIONS: "/chat/conversations/my-conversations",
     GET_MESSAGES_OF_CONVERSATION: "/chat/messages",
@@ -102,10 +125,29 @@ export const RATING = {
 
 export const REPORT = {
     CREATE_REPORT: "/jobmate/reports",
+    GET_ALL_REPORTS: "/jobmate/reports",
+    REVIEW_REPORT: (reportId) => `/jobmate/reports/${reportId}/review`,
 }
 
 export const WAITING_LIST = {
     CREATE_WAITING_LIST: "/jobmate/waiting-list",
     GET_MY_WAITING_LIST: "/jobmate/waiting-list/my-waiting",
     DELETE_WAITING_LIST: (id) => `/jobmate/waiting-list/${id}`,
+    GET_ALL_WAITING_LISTS: "/jobmate/waiting-list/candidates",
+}
+
+export const RECOMMENDATION = {
+    GET_RECOMMENDATION_JOBS: "/jobmate/recommend/jobs",
+    GET_RECOMMENDATION_USERS: "/jobmate/recommend/users",
+}
+
+export const INVITATION = {
+    SEND_INVITATION: "/jobmate/invitations",
+    GET_MY_INVITATIONS: "/jobmate/invitations/received",
+    ACCEPT_INVITATION: (id) => `/jobmate/invitations/${id}/accept`,
+    REJECT_INVITATION: (id) => `/jobmate/invitations/${id}/reject`,
+}
+
+export const CATEGORY = {
+    GET_ALL_CATEGORIES: "/jobmate/categories",
 }

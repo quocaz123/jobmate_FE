@@ -27,3 +27,22 @@ export const getAllUsers = async (page, size, status, role) => {
         }
     });
 }
+
+export const upgradeRole = async (userId) => {
+    return await httpClient.patch(USER.UPGRADE_ROLE(userId));
+}
+
+export const updatePassword = async (request) => {
+    return await httpClient.put(USER.UPDATE_PASSWORD, request);
+}
+
+export const getUserDetail = async (userId) => {
+    return await httpClient.get(USER.GET_USER_DETAIL(userId));
+}
+
+export const updateUserStatus = async (userId, status, reason = '') => {
+    return await httpClient.put(USER.UPDATE_USER_STATUS(userId), {
+        status,
+        reason
+    });
+}

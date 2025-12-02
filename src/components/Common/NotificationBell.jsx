@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
-import notificationService from '../../services/notificationService'; // Đảm bảo đường dẫn đúng
+import notificationService from '../../services/notificationService';
+import { showError } from '../../utils/toast';
 
 const NotificationBell = () => {
     const [open, setOpen] = useState(false);
@@ -14,12 +15,7 @@ const NotificationBell = () => {
         try {
             setLoading(true);
             const response = await notificationService.getNotifications();
-            console.log("🔔 Notifications API response:", response);
-
-            // ✅ Đảm bảo lấy đúng data từ API
             const rawNotifications = response?.data || [];
-            console.log("📋 Raw notifications:", rawNotifications.length, "items");
-            console.log("📋 First item read status:", rawNotifications[0]?.read);
 
             const notifications = rawNotifications
                 .map((n) => ({
@@ -30,41 +26,31 @@ const NotificationBell = () => {
                     createdAt: n?.createdAt || n?.created_at || '',
                 }))
                 .sort((a, b) => {
-                    // Chưa đọc trước, sau đó sắp theo thời gian mới nhất
                     if (a.isRead !== b.isRead) return a.isRead ? 1 : -1;
                     return new Date(b.createdAt) - new Date(a.createdAt);
                 });
 
-            console.log("✅ Processed notifications:", notifications.length);
-            console.log("📊 Unread count:", notifications.filter((n) => !n.isRead).length);
-
             setItems(notifications);
             setUnread(notifications.filter((n) => !n.isRead).length);
         } catch (error) {
-            console.error('❌ Lỗi khi tải thông báo:', error);
+            showError('Lỗi khi tải thông báo: ' + error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    // ===================== ĐÁNH DẤU ĐÃ ĐỌC =====================
+
     const handleRead = async (id) => {
         try {
-            // ✅ Optimistic update - cập nhật UI ngay lập tức
             setItems(prev => prev.map(n =>
                 n.id === id ? { ...n, isRead: true } : n
             ));
             setUnread(prev => Math.max(0, prev - 1));
 
-            console.log('🔔 Marking as read:', id);
-            const response = await notificationService.markAsRead(id);
-            console.log('✅ Mark as read response:', response);
+            await notificationService.markAsRead(id);
 
-            // ⚠️ KHÔNG cần refreshList() vì backend không update đúng
-            // UI đã được update bằng optimistic update ở trên
         } catch (err) {
-            console.error('❌ Lỗi khi đánh dấu đã đọc:', err);
-            // Rollback nếu lỗi - đặt lại thành chưa đọc
+            showError('Lỗi khi đánh dấu đã đọc: ' + err.message);
             setItems(prev => prev.map(n =>
                 n.id === id ? { ...n, isRead: false } : n
             ));
@@ -76,19 +62,13 @@ const NotificationBell = () => {
         try {
             const unreadItems = items.filter((n) => !n.isRead);
             if (unreadItems.length === 0) return;
-
-            // ✅ Optimistic update
             setItems(prev => prev.map(n => ({ ...n, isRead: true })));
             setUnread(0);
 
-            console.log('🔔 Marking all as read:', unreadItems.length, 'items');
             await Promise.all(unreadItems.map((n) => notificationService.markAsRead(n.id)));
-            console.log('✅ All marked as read');
 
-            // ⚠️ KHÔNG cần refreshList() vì backend không update đúng
         } catch (err) {
-            console.error('❌ Lỗi khi đánh dấu tất cả:', err);
-            // Rollback nếu lỗi
+            showError('Lỗi khi đánh dấu tất cả: ' + err.message);
             await refreshList();
         }
     };
@@ -97,16 +77,12 @@ const NotificationBell = () => {
         if (!confirm('Bạn có chắc muốn xóa tất cả thông báo?')) return;
 
         try {
-            // ✅ Optimistic update - xóa UI ngay
+
             setItems([]);
             setUnread(0);
-
-            console.log('🗑️ Deleting all notifications');
             await notificationService.deleteAll();
-            console.log('✅ All notifications deleted');
         } catch (err) {
-            console.error('❌ Lỗi khi xóa tất cả:', err);
-            // Rollback nếu lỗi
+            showError('Lỗi khi đánh dấu tất cả: ' + err.message);
             await refreshList();
         }
     };    // ===================== UI HANDLER =====================

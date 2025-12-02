@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Check, AlertCircle } from "lucide-react";
 import { submitReport } from "../../services/reportService";
+import { showWarning } from "../../utils/toast";
 
 const ReportModal = ({ isOpen, onClose, targetType, targetId, targetTitle }) => {
     
@@ -29,8 +30,7 @@ const ReportModal = ({ isOpen, onClose, targetType, targetId, targetTitle }) => 
                 handleClose();
             }, 2000);
         } catch (error) {
-            console.error("Lỗi khi báo cáo:", error);
-            alert(error?.response?.data?.message || "Không thể gửi báo cáo. Vui lòng thử lại.");
+            showWarning(error?.response?.data?.message || "Không thể gửi báo cáo. Vui lòng thử lại.");
         } finally {
             setIsSubmitting(false);
         }

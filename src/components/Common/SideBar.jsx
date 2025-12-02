@@ -1,5 +1,7 @@
 import React from "react";
-import { ChevronLeft, LayoutDashboard, Briefcase, ClipboardList, Send, MessageSquare, Calendar, FileText, ShieldCheck, Home, Settings, LogOut } from 'lucide-react';
+import { ChevronLeft, LogOut } from 'lucide-react';
+import { logout } from '../../services/authService';
+import { removeToken } from '../../services/localStorageService';
 
 const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSidebarOpen, logo, logoText }) => {
     return (
@@ -80,23 +82,10 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, setSideba
             {/* Bottom Navigation */}
             <div className="border-t border-gray-200 px-3 py-4 space-y-1">
                 <button
-                    onClick={() => setActiveTab('home-page')}
-                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-blue-50 transition-colors"
-                >
-                    <Home className="h-5 w-5 text-gray-600" />
-                    {sidebarOpen && <span className="text-sm font-medium">Về trang chủ</span>}
-                </button>
-                <button
-                    onClick={() => setActiveTab('settings')}
-                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-gray-700 hover:bg-blue-50 transition-colors"
-                >
-                    <Settings className="h-5 w-5 text-gray-600" />
-                    {sidebarOpen && <span className="text-sm font-medium">Cài đặt</span>}
-                </button>
-                <button
                     onClick={() => {
-                        // TODO: Implement logout
-                        console.log('Đăng xuất');
+                        logout();
+                        removeToken();
+                        window.location.href = '/login';
                     }}
                     className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
                 >

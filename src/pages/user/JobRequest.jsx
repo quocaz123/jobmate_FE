@@ -1,8 +1,21 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { MapPin, DollarSign, Plus, Trash2, Activity, X, Clock, Calendar, AlertCircle, CheckCircle } from "lucide-react";
+import { AlertCircle, CheckCircle } from "lucide-react";
 import { createWaitingList, getMyWaitingList, deleteWaitingList } from "../../services/waitingListService";
 import { getUserInfo } from "../../services/userService";
-import { getAvailableJobs, getJobDetailByIdForUser } from "../../services/jobService";
+import { getRecommendedJobs } from "../../services/recommendService";
+import { SALARY_UNIT_OPTIONS, SALARY_UNIT_LABELS } from "../../constants/salaryUnits";
+import { SKILL_SUGGESTIONS } from "../../constants/skillSuggestions";
+import {
+  formatWorkingDaysForAPI,
+  formatWorkingHours,
+  parseWorkingDays,
+  parseWorkingHours,
+  isFlexibleLabel,
+} from "../../utils/scheduleUtils";
+import JobListDetail from "./JobListDetail";
+import JobRequestForm from "./components/JobRequestForm";
+import JobRecommendations from "./components/JobRecommendations";
+import JobRequestList from "./components/JobRequestList";
 
 const MAX_REQUESTS = 5;
 
@@ -13,51 +26,25 @@ const jobTypeOptions = [
   { value: "INTERNSHIP", label: "Thực tập" },
 ];
 
+const DEFAULT_SALARY_UNIT = "VND_PER_HOUR";
+
 function formatDate(dateString) {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleString('vi-VN');
 }
 
-function formatSalary(salary) {
+function formatSalary(salary, unit) {
   if (!salary) return '—';
-  return new Intl.NumberFormat('vi-VN').format(salary) + ' VND';
+  const amount = new Intl.NumberFormat('vi-VN').format(salary) + 'đ';
+  const unitLabel = unit ? (SALARY_UNIT_LABELS[unit] || unit) : 'VND';
+  return `${amount} · ${unitLabel}`;
 }
 
 function formatJobSalary(salary, unit) {
-  if (!salary) return '—';
-  const formatted = new Intl.NumberFormat('vi-VN').format(salary);
-  return `${formatted} ${unit || 'VND'}`;
-}
-
-function computeMatchPercent(requirement, job) {
-  let score = 0;
-  const reqSkills = requirement.skills.map((s) => s.toLowerCase().trim()).filter(Boolean);
-  const jobSkills = job.skills ? job.skills.split(';').map((s) => s.toLowerCase().trim()).filter(Boolean) : [];
-
-  if (reqSkills.length && jobSkills.length) {
-    const matchedSkills = reqSkills.filter((s) =>
-      jobSkills.some((js) => js.includes(s) || s.includes(js))
-    );
-    score += Math.min(60, (matchedSkills.length / Math.max(1, reqSkills.length)) * 60);
-  }
-
-  if (requirement.jobType && job.jobType && job.jobType === requirement.jobType) {
-    score += 20;
-  }
-
-  if (requirement.expectedMinSalary && job.salary) {
-    if (job.salary >= requirement.expectedMinSalary) {
-      score += 20;
-    }
-  }
-
-  return Math.min(100, Math.round(score));
-}
-
-function percentClass(p) {
-  if (p >= 80) return "bg-green-100 text-green-700";
-  if (p >= 50) return "bg-yellow-100 text-yellow-700";
-  return "bg-red-100 text-red-700";
+  if (!salary) return unit ? (SALARY_UNIT_LABELS[unit] || unit) : '—';
+  const formatted = new Intl.NumberFormat('vi-VN').format(salary) + 'đ';
+  const label = unit ? (SALARY_UNIT_LABELS[unit] || unit) : '';
+  return label ? `${formatted} · ${label}` : formatted;
 }
 
 export default function JobRequest() {
@@ -65,9 +52,12 @@ export default function JobRequest() {
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
   const [expectedMinSalary, setExpectedMinSalary] = useState("");
+  const [expectedSalaryUnit, setExpectedSalaryUnit] = useState(DEFAULT_SALARY_UNIT);
   const [searchRadius, setSearchRadius] = useState(10);
-  const [availableDays, setAvailableDays] = useState("");
-  const [availableTime, setAvailableTime] = useState("");
+  const [selectedDays, setSelectedDays] = useState([]);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [isFlexibleHours, setIsFlexibleHours] = useState(false);
   const [note, setNote] = useState("");
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
@@ -75,11 +65,13 @@ export default function JobRequest() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [myRequests, setMyRequests] = useState([]);
-  const [showCreateForm, setShowCreateForm] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
-  const [suggestedJobs, setSuggestedJobs] = useState([]);
-  const [loadingJobs, setLoadingJobs] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [recommendedJobs, setRecommendedJobs] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [selectedWaitingListId, setSelectedWaitingListId] = useState(null);
+  const [recommendError, setRecommendError] = useState("");
+  const [detailJobId, setDetailJobId] = useState(null);
   const [showJobDetail, setShowJobDetail] = useState(false);
 
   const loadMyRequests = async () => {
@@ -96,36 +88,30 @@ export default function JobRequest() {
     }
   };
 
-  const loadSuggestedJobs = useCallback(async () => {
-    setLoadingJobs(true);
+  const fetchRecommendedJobs = useCallback(async (waitingListId) => {
+    if (!waitingListId) return;
+    setLoadingRecommendations(true);
+    setRecommendError("");
     try {
-      const res = await getAvailableJobs();
-      const allJobs = res?.data?.data || res?.data || [];
-      const jobsArray = Array.isArray(allJobs) ? allJobs : [];
-
-      const requirement = {
-        skills,
-        jobType,
-        expectedMinSalary: parseFloat(expectedMinSalary) || 0,
-      };
-
-      const matched = jobsArray
-        .map((job) => ({
-          ...job,
-          match: computeMatchPercent(requirement, job),
-        }))
-        .filter((job) => job.match > 0)
-        .sort((a, b) => b.match - a.match)
-        .slice(0, 5); // Top 5
-
-      setSuggestedJobs(matched);
+      const res = await getRecommendedJobs(waitingListId);
+      console.log("Recommended jobs response:", res);
+      const payload = res?.data?.data;
+      const nested = payload?.data;
+      let jobs = [];
+      if (Array.isArray(nested)) {
+        jobs = nested.flatMap((item) =>
+          Array.isArray(item) ? item.filter(Boolean) : [item]
+        );
+      }
+      setRecommendedJobs(jobs);
     } catch (err) {
       console.error("Lỗi khi tải gợi ý công việc:", err);
-      setSuggestedJobs([]);
+      setRecommendError(err?.response?.data?.message || "Không thể tải gợi ý công việc.");
+      setRecommendedJobs([]);
     } finally {
-      setLoadingJobs(false);
+      setLoadingRecommendations(false);
     }
-  }, [skills, jobType, expectedMinSalary]);
+  }, []);
 
   // Load user profile để lấy địa chỉ
   useEffect(() => {
@@ -136,6 +122,19 @@ export default function JobRequest() {
         setUserProfile(profile);
         if (profile.address) {
           setLocation(profile.address);
+        }
+        if (profile.availableDays) {
+          setSelectedDays(parseWorkingDays(profile.availableDays));
+        }
+        if (isFlexibleLabel(profile.availableTime)) {
+          setIsFlexibleHours(true);
+          setStartTime("");
+          setEndTime("");
+        } else {
+          const parsed = parseWorkingHours(profile.availableTime);
+          setIsFlexibleHours(false);
+          setStartTime(parsed.start);
+          setEndTime(parsed.end);
         }
       } catch (err) {
         console.error("Lỗi khi tải thông tin người dùng:", err);
@@ -149,23 +148,16 @@ export default function JobRequest() {
     loadMyRequests();
   }, []);
 
-  // Load gợi ý công việc khi có skills hoặc jobType
-  useEffect(() => {
-    if (skills.length > 0 || jobType) {
-      loadSuggestedJobs();
-    } else {
-      setSuggestedJobs([]);
-    }
-  }, [skills, jobType, expectedMinSalary, loadSuggestedJobs]);
+  const handleViewJobDetail = (jobId) => {
+    if (!jobId) return;
+    setDetailJobId(jobId);
+    setShowJobDetail(true);
+  };
 
-  const handleViewJobDetail = async (jobId) => {
-    try {
-      const res = await getJobDetailByIdForUser(jobId);
-      setSelectedJob(res?.data?.data || res?.data);
-      setShowJobDetail(true);
-    } catch (err) {
-      alert(err?.response?.data?.message || "Không thể tải chi tiết công việc");
-    }
+  const handleSelectWaitingList = (requestId) => {
+    if (!requestId) return;
+    setSelectedWaitingListId(requestId);
+    fetchRecommendedJobs(requestId);
   };
 
   const handleCloseRequest = async (requestId) => {
@@ -182,12 +174,19 @@ export default function JobRequest() {
     }
   };
 
-  const addSkill = () => {
-    const s = skillInput.trim();
-    if (s && !skills.includes(s)) {
-      setSkills([...skills, s]);
+  const addSkill = (skillName) => {
+    const rawValue = typeof skillName === "string" ? skillName : skillInput;
+    const normalized = rawValue.trim();
+    if (!normalized) {
+      if (typeof skillName !== "string") setSkillInput("");
+      return;
     }
-    setSkillInput("");
+    if (!skills.includes(normalized)) {
+      setSkills((prev) => [...prev, normalized]);
+    }
+    if (typeof skillName !== "string") {
+      setSkillInput("");
+    }
   };
 
   const removeSkill = (index) => {
@@ -221,16 +220,31 @@ export default function JobRequest() {
       return;
     }
 
+    // Kiểm tra tọa độ địa lý
+    const latitude = userProfile?.latitude ?? userProfile?.lat ?? null;
+    const longitude = userProfile?.longitude ?? userProfile?.lon ?? userProfile?.lng ?? null;
+
+    if (!latitude || !longitude) {
+      setError("Vui lòng cập nhật địa chỉ có tọa độ địa lý trong hồ sơ để hệ thống có thể tìm việc phù hợp theo khoảng cách.");
+      return;
+    }
+
     setLoading(true);
     try {
+      const formattedDays = formatWorkingDaysForAPI(selectedDays);
+      const formattedTime = isFlexibleHours ? "Linh hoạt" : formatWorkingHours(startTime, endTime);
+
       const data = {
         jobType,
         skills: skills.join(";"),
         expectedMinSalary: parseFloat(expectedMinSalary),
+        expectedSalaryUnit,
         searchRadius: parseFloat(searchRadius),
-        availableDays: availableDays || undefined,
-        availableTime: availableTime || undefined,
+        availableDays: formattedDays || undefined,
+        availableTime: formattedTime || undefined,
         note: note || undefined,
+        latitude: latitude,
+        longitude: longitude,
       };
 
       await createWaitingList(data);
@@ -241,9 +255,12 @@ export default function JobRequest() {
       setSkills([]);
       setSkillInput("");
       setExpectedMinSalary("");
+      setExpectedSalaryUnit(DEFAULT_SALARY_UNIT);
       setSearchRadius(10);
-      setAvailableDays("");
-      setAvailableTime("");
+      setSelectedDays([]);
+      setStartTime("");
+      setEndTime("");
+      setIsFlexibleHours(false);
       setNote("");
 
       // Reload danh sách
@@ -286,348 +303,92 @@ export default function JobRequest() {
         </div>
       )}
 
-      {/* Form tạo yêu cầu - Layout gọn */}
-      {showCreateForm && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <form onSubmit={handleCreate} className="lg:col-span-2 bg-white rounded-2xl border border-indigo-100 shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-medium text-indigo-700">Tạo yêu cầu tìm việc mới</h2>
-              <span className="text-sm text-gray-500">
-                {myRequests.length}/{MAX_REQUESTS} yêu cầu
-              </span>
-            </div>
-
-            {/* Row 1: Loại công việc và Lương */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Loại công việc *</label>
-                <select
-                  value={jobType}
-                  onChange={(e) => setJobType(e.target.value)}
-                  className="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                  required
-                >
-                  {jobTypeOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Lương tối thiểu (VND) *</label>
-                <input
-                  type="number"
-                  value={expectedMinSalary}
-                  onChange={(e) => setExpectedMinSalary(e.target.value)}
-                  placeholder="15000000"
-                  min="0"
-                  className="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Row 2: Kỹ năng */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Kỹ năng *</label>
-              <div className="flex gap-2">
-                <input
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                  placeholder="Nhập kỹ năng..."
-                  className="flex-1 border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                />
-                <button
-                  type="button"
-                  onClick={addSkill}
-                  className="p-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {skills.map((s, i) => (
-                  <div
-                    key={i}
-                    className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1 text-xs"
-                  >
-                    {s}
-                    <button
-                      type="button"
-                      onClick={() => removeSkill(i)}
-                      className="text-indigo-500 hover:text-indigo-700"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Row 3: Bán kính và Vị trí */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Bán kính (km) *</label>
-                <input
-                  type="number"
-                  value={searchRadius}
-                  onChange={(e) => setSearchRadius(e.target.value)}
-                  min="1"
-                  max="100"
-                  className="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Vị trí *</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Địa chỉ từ hồ sơ..."
-                    className="flex-1 border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                    required
-                  />
-                  <MapPin size={16} className="text-gray-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* Row 4: Ngày và Thời gian làm việc */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Ngày làm việc</label>
-                <input
-                  type="text"
-                  value={availableDays}
-                  onChange={(e) => setAvailableDays(e.target.value)}
-                  placeholder="Thứ 2 - Thứ 6"
-                  className="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Thời gian</label>
-                <input
-                  type="text"
-                  value={availableTime}
-                  onChange={(e) => setAvailableTime(e.target.value)}
-                  placeholder="8 giờ/ngày"
-                  className="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300"
-                />
-              </div>
-            </div>
-
-            {/* Row 5: Ghi chú */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Ghi chú</label>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Tìm việc Java developer..."
-                rows={2}
-                className="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 resize-none"
-              />
-            </div>
-
-            {!userProfile?.address && (
-              <p className="text-xs text-amber-600">
-                ⚠️ Vui lòng cập nhật địa chỉ trong hồ sơ của bạn.
-              </p>
-            )}
-
-            {/* Nút submit */}
-            <div className="flex items-center gap-4 pt-2">
-              <button
-                type="submit"
-                disabled={loading || myRequests.length >= MAX_REQUESTS}
-                className="px-6 py-2 rounded-full text-white bg-gradient-to-r from-indigo-600 to-blue-500 shadow hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              >
-                {loading ? "Đang tạo..." : "Tạo yêu cầu"}
-              </button>
-              {myRequests.length >= MAX_REQUESTS && (
-                <span className="text-xs text-amber-600">
-                  Đã đạt giới hạn {MAX_REQUESTS} yêu cầu
-                </span>
-              )}
-            </div>
-          </form>
-
-          {/* Gợi ý công việc */}
-          <aside className="lg:sticky lg:top-6 space-y-4" style={{ alignSelf: 'flex-start' }}>
-            <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-indigo-700 mb-3">Gợi ý công việc</h3>
-              {loadingJobs ? (
-                <div className="text-center py-4 text-gray-500 text-sm">Đang tải...</div>
-              ) : suggestedJobs.length === 0 ? (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  <Activity size={24} className="mx-auto mb-2 text-indigo-400" />
-                  Nhập kỹ năng để xem gợi ý
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                  {suggestedJobs.map((job) => (
-                    <div key={job.id} className="p-3 border border-indigo-50 rounded-lg hover:shadow transition bg-white">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-1">{job.title}</h4>
-                      <p className="text-xs text-gray-500 mb-2">{job.companyName || '—'}</p>
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                        <span className="flex items-center gap-1">
-                          <MapPin size={12} />{job.location || '—'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <DollarSign size={12} />{formatJobSalary(job.salary, job.salaryUnit)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${percentClass(job.match)}`}>
-                          {job.match}% phù hợp
-                        </span>
-                        <button
-                          onClick={() => handleViewJobDetail(job.id)}
-                          className="px-2 py-1 rounded-md bg-indigo-600 text-white text-xs hover:bg-indigo-700"
-                        >
-                          Xem chi tiết
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 text-center text-xs text-gray-500">
-              <Activity size={16} className="mx-auto mb-1 text-indigo-400" />
-              Gợi ý dựa trên kỹ năng và loại công việc bạn chọn.
-            </div>
-          </aside>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="space-y-6 lg:col-span-2">
+          <JobRequestList
+            requests={myRequests}
+            loading={loadingList}
+            maxRequests={MAX_REQUESTS}
+            selectedWaitingListId={selectedWaitingListId}
+            onSelect={handleSelectWaitingList}
+            onClose={handleCloseRequest}
+            formatSalary={formatSalary}
+            formatDate={formatDate}
+            getJobTypeLabel={getJobTypeLabel}
+          />
         </div>
-      )}
 
-      {/* Danh sách yêu cầu đã tạo */}
-      <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-6">
-        <h2 className="text-lg font-medium text-indigo-700 mb-4">Danh sách yêu cầu đã tạo ({myRequests.length}/{MAX_REQUESTS})</h2>
-
-        {loadingList ? (
-          <div className="text-center py-8 text-gray-500">Đang tải...</div>
-        ) : myRequests.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Activity size={32} className="mx-auto mb-2 text-indigo-400" />
-            <p>Bạn chưa có yêu cầu tìm việc nào.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {myRequests.map((request, index) => (
-              <div
-                key={request.id || index}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium">
-                        {getJobTypeLabel(request.jobType)}
-                      </span>
-                      {request.createdAt && (
-                        <span className="text-xs text-gray-500">
-                          {formatDate(request.createdAt)}
-                        </span>
-                      )}
-                      {request.status === 'CLOSED' && (
-                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">
-                          Đã đóng
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <DollarSign size={16} className="text-gray-400" />
-                        <span className="text-gray-600">Lương tối thiểu:</span>
-                        <span className="font-medium">{formatSalary(request.expectedMinSalary)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={16} className="text-gray-400" />
-                        <span className="text-gray-600">Bán kính:</span>
-                        <span className="font-medium">{request.searchRadius || '—'} km</span>
-                      </div>
-                      {request.availableDays && (
-                        <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-gray-400" />
-                          <span className="text-gray-600">Ngày làm việc:</span>
-                          <span className="font-medium">{request.availableDays}</span>
-                        </div>
-                      )}
-                      {request.availableTime && (
-                        <div className="flex items-center gap-2">
-                          <Clock size={16} className="text-gray-400" />
-                          <span className="text-gray-600">Thời gian:</span>
-                          <span className="font-medium">{request.availableTime}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {request.skills && (
-                      <div className="mt-3">
-                        <span className="text-sm text-gray-600">Kỹ năng: </span>
-                        <div className="inline-flex flex-wrap gap-1 mt-1">
-                          {request.skills.split(';').map((skill, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs"
-                            >
-                              {skill.trim()}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {request.note && (
-                      <div className="mt-3 p-2 bg-gray-50 rounded text-sm text-gray-700">
-                        <span className="font-medium">Ghi chú: </span>
-                        {request.note}
-                      </div>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    {request.status !== 'CLOSED' && (
-                      <button
-                        onClick={() => handleCloseRequest(request.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Đóng yêu cầu"
-                      >
-                        <X size={18} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <JobRecommendations
+          loading={loadingRecommendations}
+          error={recommendError}
+          selectedWaitingListId={selectedWaitingListId}
+          recommendedJobs={recommendedJobs}
+          formatJobSalary={formatJobSalary}
+          onViewDetail={handleViewJobDetail}
+        />
       </div>
 
       {/* Modal chi tiết công việc */}
-      {showJobDetail && selectedJob && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-md relative max-h-[90vh] overflow-y-auto">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              onClick={() => {
+      {showJobDetail && detailJobId && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+            <JobListDetail
+              id={detailJobId}
+              variant="modal"
+              onBack={() => {
                 setShowJobDetail(false);
-                setSelectedJob(null);
+                setDetailJobId(null);
               }}
+            />
+          </div>
+        </div>
+      )}
+
+      {showCreateForm && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl relative">
+            <button
+              onClick={() => setShowCreateForm(false)}
+              className="absolute top-4 right-4 px-3 py-1.5 text-sm rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              <X size={18} />
+              Đóng
             </button>
-            <h3 className="text-lg font-semibold text-indigo-700 mb-2">{selectedJob.title}</h3>
-            <p className="text-sm text-gray-600 mb-2">{selectedJob.companyName || '—'}</p>
-            <p className="text-sm text-gray-500 mb-2">{selectedJob.description || '—'}</p>
-            <div className="space-y-1 text-sm text-gray-500">
-              <p>💰 {formatJobSalary(selectedJob.salary, selectedJob.salaryUnit)}</p>
-              <p>📍 {selectedJob.location || '—'}</p>
-              {selectedJob.jobType && (
-                <p>📋 {getJobTypeLabel(selectedJob.jobType)}</p>
-              )}
+            <div className="p-6">
+              <JobRequestForm
+                show={true}
+                jobType={jobType}
+                setJobType={setJobType}
+                jobTypeOptions={jobTypeOptions}
+                expectedMinSalary={expectedMinSalary}
+                setExpectedMinSalary={setExpectedMinSalary}
+                expectedSalaryUnit={expectedSalaryUnit}
+                setExpectedSalaryUnit={setExpectedSalaryUnit}
+                salaryUnitOptions={SALARY_UNIT_OPTIONS}
+                skills={skills}
+                skillInput={skillInput}
+                setSkillInput={setSkillInput}
+                addSkill={addSkill}
+                removeSkill={removeSkill}
+                skillSuggestions={SKILL_SUGGESTIONS}
+                searchRadius={searchRadius}
+                setSearchRadius={setSearchRadius}
+                location={location}
+                selectedDays={selectedDays}
+                setSelectedDays={setSelectedDays}
+                startTime={startTime}
+                setStartTime={setStartTime}
+                endTime={endTime}
+                setEndTime={setEndTime}
+                isFlexibleHours={isFlexibleHours}
+                setIsFlexibleHours={setIsFlexibleHours}
+                note={note}
+                setNote={setNote}
+                userProfile={userProfile}
+                loading={loading}
+                myRequestsLength={myRequests.length}
+                maxRequests={MAX_REQUESTS}
+                handleCreate={handleCreate}
+              />
             </div>
           </div>
         </div>

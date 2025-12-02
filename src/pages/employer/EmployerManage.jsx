@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { MapPin, DollarSign, Clock, Users, Eye, MoreVertical, Trash2, Edit, Search, Calendar } from 'lucide-react'
-import { get_my_Jobs } from '../../services/jobService'
+import { get_my_Jobs, closeJob as closeJobApi, deleteJob as deleteJobApi } from '../../services/jobService'
 import Pagination from '../../components/Common/Pagination'
 import EmployerCandidates from './EmployerCandidates'
 
@@ -32,7 +32,7 @@ const formatInstant = (isoUtc) => {
 }
 
 
-export default function EmployerManage({ onView, onEdit, onStartChat }) {
+export default function EmployerManage({ onView, onEdit, onStartChat, onEditWithStatus }) {
   const [jobs, setJobs] = useState([])
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
@@ -101,27 +101,56 @@ export default function EmployerManage({ onView, onEdit, onStartChat }) {
     }
   }, [openMenuId])
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     const ok = window.confirm('Bạn có chắc muốn xóa tin tuyển dụng này?')
     if (!ok) return
-    const next = jobs.filter(j => j.id !== id)
-    setJobs(next)
-    setMessage({ type: 'success', text: 'Đã xóa tin tuyển dụng.' })
+    try {
+      await deleteJobApi(id)
+      const next = jobs.filter(j => j.id !== id)
+      setJobs(next)
+      setMessage({ type: 'success', text: 'Đã xóa tin tuyển dụng.' })
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message || 'Không thể xóa tin tuyển dụng. Vui lòng thử lại.'
+      setMessage({ type: 'error', text: errorMessage })
+    }
   }
 
   function handleEdit(id) {
-    if (onEdit) onEdit(id)
+    const job = jobs.find(j => j.id === id)
+    if (!job) return
+    
+    // Cho phép edit nếu status là PENDING_REVIEW, CLOSED, hoặc REJECTED
+    const editableStatuses = ['PENDING_REVIEW', 'CLOSED', 'REJECTED']
+    if (!editableStatuses.includes(job.status)) {
+      setMessage({ type: 'error', text: 'Chỉ có thể chỉnh sửa tin đang chờ duyệt, đã đóng hoặc bị từ chối.' })
+      return
+    }
+    
+    // Nếu có onEditWithStatus, truyền cả status
+    if (onEditWithStatus) {
+      onEditWithStatus(id, job.status)
+    } else if (onEdit) {
+      onEdit(id)
+    }
   }
 
-  function handleCloseJob(id) {
+  async function handleCloseJob(id) {
     const job = jobs.find(j => j.id === id)
     if (!job) return
     const ok = window.confirm('Đóng tin tuyển dụng này? Ứng viên sẽ không thể ứng tuyển.')
     if (!ok) return
-    const next = jobs.map(j => j.id === id ? { ...j, status: 'CLOSED' } : j)
-    setJobs(next)
-    setOpenMenuId(null)
-    setMessage({ type: 'success', text: 'Đã đóng tin tuyển dụng.' })
+
+    try {
+      await closeJobApi(id)
+      const next = jobs.map(j => j.id === id ? { ...j, status: 'CLOSED' } : j)
+      setJobs(next)
+      setMessage({ type: 'success', text: 'Đã đóng tin tuyển dụng.' })
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message || 'Không thể đóng tin tuyển dụng. Vui lòng thử lại.'
+      setMessage({ type: 'error', text: errorMessage })
+    } finally {
+      setOpenMenuId(null)
+    }
   }
 
   function handleViewCandidates(jobId, jobTitle) {
@@ -252,9 +281,15 @@ export default function EmployerManage({ onView, onEdit, onStartChat }) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleEdit(job.id)}
-                      disabled={job.status !== 'PENDING_REVIEW'}
-                      className={`p-2 rounded ${job.status !== 'PENDING_REVIEW' ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-                      title={job.status !== 'PENDING_REVIEW' ? 'Chỉ có thể sửa khi đang chờ duyệt' : 'Sửa'}
+                      disabled={!['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status)}
+                      className={`p-2 rounded ${!['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50 text-blue-600'}`}
+                      title={
+                        !['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status) 
+                          ? 'Chỉ có thể sửa tin đang chờ duyệt, đã đóng hoặc bị từ chối' 
+                          : job.status === 'CLOSED' || job.status === 'REJECTED'
+                            ? 'Chỉnh sửa và đăng lại'
+                            : 'Sửa'
+                      }
                     >
                       <Edit size={16} />
                     </button>
@@ -269,13 +304,19 @@ export default function EmployerManage({ onView, onEdit, onStartChat }) {
                           >
                             <Users size={16} /> Xem danh sách ứng viên
                           </button>
-                          <button
-                            disabled={job.status !== 'APPROVED'}
-                            onClick={() => handleCloseJob(job.id)}
-                            className={`w-full text-left px-3 py-2 text-sm ${job.status !== 'APPROVED' ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-                          >
-                            Đóng tin
-                          </button>
+                          {(() => {
+                            const closableStatuses = ['APPROVED', 'PENDING_REVIEW', 'REJECTED']
+                            const canClose = closableStatuses.includes(job.status)
+                            return (
+                              <button
+                                disabled={!canClose}
+                                onClick={() => canClose && handleCloseJob(job.id)}
+                                className={`w-full text-left px-3 py-2 text-sm ${!canClose ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                              >
+                                Đóng tin
+                              </button>
+                            )
+                          })()}
                         </div>
                       )}
                     </div>

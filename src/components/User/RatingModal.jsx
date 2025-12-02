@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Star, X, Check } from "lucide-react";
 import { createRating } from "../../services/ratingService";
+import { showSuccess, showWarning } from "../../utils/toast";
 
 const RatingModal = ({ isOpen, onClose, jobTitle, jobId, employerId, employerName, onSuccess, isEmployerRating = false }) => {
     const [score, setScore] = useState(0);
@@ -13,12 +14,12 @@ const RatingModal = ({ isOpen, onClose, jobTitle, jobId, employerId, employerNam
         e.preventDefault();
 
         if (score < 1 || score > 5) {
-            alert("Vui lòng chọn điểm đánh giá từ 1 đến 5 sao");
+            showWarning("Vui lòng chọn điểm đánh giá từ 1 đến 5 sao");
             return;
         }
 
         if (!employerId) {
-            alert(isEmployerRating ? "Không tìm thấy thông tin ứng viên" : "Không tìm thấy thông tin nhà tuyển dụng");
+            showWarning(isEmployerRating ? "Không tìm thấy thông tin ứng viên" : "Không tìm thấy thông tin nhà tuyển dụng");
             return;
         }
 
@@ -38,8 +39,7 @@ const RatingModal = ({ isOpen, onClose, jobTitle, jobId, employerId, employerNam
                 handleClose();
             }, 2000);
         } catch (error) {
-            console.error("Lỗi khi đánh giá:", error);
-            alert(error?.response?.data?.message || "Không thể gửi đánh giá. Vui lòng thử lại.");
+            showWarning(error?.response?.data?.message || "Không thể gửi đánh giá. Vui lòng thử lại.");
         } finally {
             setIsSubmitting(false);
         }

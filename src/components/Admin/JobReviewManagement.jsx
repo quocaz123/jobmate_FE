@@ -1,8 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Eye, Check, X, MapPin, DollarSign, Briefcase, Calendar, Building2, Phone, Clock, Users } from 'lucide-react';
 import { getAllJobPeding, approveJob, rejectJob, getJobDetail } from '../../services/jobService';
+import { showSuccess, showError, showWarning } from '../../utils/toast';
+import { formatWorkingDaysForDisplay } from '../../utils/scheduleUtils';
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
+
+const extractPageData = (response) => {
+    const payload = response?.data ?? response ?? {};
+    const pageData = payload?.data ?? payload ?? {};
+
+    const list =
+        Array.isArray(pageData?.data) ? pageData.data :
+            Array.isArray(pageData?.content) ? pageData.content :
+                Array.isArray(pageData?.items) ? pageData.items :
+                    Array.isArray(pageData?.results) ? pageData.results :
+                        Array.isArray(pageData) ? pageData : [];
+
+    return {
+        items: list,
+        meta: pageData,
+    };
+};
 
 const formatSalary = (salary, unit) => {
     if (!salary) return '—';
@@ -73,8 +92,10 @@ export default function JobReviewManagement() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [rows, setRows] = useState([]);
+    const [serverPage, setServerPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalElements, setTotalElements] = useState(0);
+    const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
     const [detail, setDetail] = useState(null);
     const [showDetail, setShowDetail] = useState(false);
@@ -88,13 +109,30 @@ export default function JobReviewManagement() {
             setLoading(true);
             setError('');
             try {
-                const res = await getAllJobPeding(Math.max(page - 1, 0), PAGE_SIZE);
-                const payload = res?.data?.data || {};
-                const data = Array.isArray(payload?.data) ? payload.data : [];
+                const res = await getAllJobPeding(Math.max(page - 1, 0), pageSize);
+                const { items, meta: serverMeta } = extractPageData(res);
 
-                setRows(data);
-                setTotalPages(payload.totalPages || 1);
-                setTotalElements(payload.totalElements || data.length);
+                const serverPageSize = serverMeta.pageSize || serverMeta.size || DEFAULT_PAGE_SIZE;
+                const serverTotalPages = serverMeta.totalPages || serverMeta.totalPage || serverMeta.pages || 1;
+                const serverTotalElements = serverMeta.totalElements || serverMeta.totalItems || serverMeta.total || items.length;
+                let currentPageFromServer = 1;
+                if (typeof serverMeta.currentPage === 'number') {
+                    currentPageFromServer = serverMeta.currentPage;
+                } else if (typeof serverMeta.page === 'number') {
+                    currentPageFromServer = serverMeta.page + 1;
+                } else if (typeof serverMeta.number === 'number') {
+                    currentPageFromServer = serverMeta.number + 1;
+                }
+
+                const syncedPage = currentPageFromServer || page;
+                setServerPage(syncedPage);
+                if (syncedPage !== page) {
+                    setPage(syncedPage);
+                }
+                setTotalPages(serverTotalPages || 1);
+                setTotalElements(serverTotalElements);
+                setPageSize(serverPageSize);
+                setRows(items);
             } catch (err) {
                 setError(err?.response?.data?.message || 'Không tải được danh sách công việc chờ duyệt');
                 setRows([]);
@@ -103,7 +141,7 @@ export default function JobReviewManagement() {
             }
         };
         fetchJobs();
-    }, [page, refreshKey]);
+    }, [page, refreshKey, pageSize]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -117,8 +155,8 @@ export default function JobReviewManagement() {
         );
     }, [rows, search]);
 
-    const start = totalElements === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-    const end = totalElements === 0 ? 0 : Math.min(page * PAGE_SIZE, totalElements);
+    const start = totalElements === 0 ? 0 : (serverPage - 1) * pageSize + 1;
+    const end = totalElements === 0 ? 0 : Math.min(serverPage * pageSize, totalElements);
 
     const openDetail = async (jobId) => {
         try {
@@ -128,7 +166,7 @@ export default function JobReviewManagement() {
             setActionType(null);
             setRejectReason('');
         } catch (err) {
-            alert(err?.response?.data?.message || 'Không tải được chi tiết công việc');
+            showError(err?.response?.data?.message || 'Không tải được chi tiết công việc');
         }
     };
 
@@ -137,11 +175,11 @@ export default function JobReviewManagement() {
         try {
             setSubmitting(true);
             await approveJob(detail.id);
-            alert('Đã duyệt công việc thành công!');
+            showSuccess('Đã duyệt công việc thành công!');
             setShowDetail(false);
             setRefreshKey((k) => k + 1);
         } catch (err) {
-            alert(err?.response?.data?.message || 'Duyệt công việc thất bại');
+            showError(err?.response?.data?.message || 'Duyệt công việc thất bại');
         } finally {
             setSubmitting(false);
         }
@@ -154,17 +192,17 @@ export default function JobReviewManagement() {
             return;
         }
         if (!rejectReason.trim()) {
-            alert('Vui lòng nhập lý do từ chối.');
+            showWarning('Vui lòng nhập lý do từ chối.');
             return;
         }
         try {
             setSubmitting(true);
             await rejectJob(detail.id, rejectReason.trim());
-            alert('Đã từ chối công việc thành công!');
+            showSuccess('Đã từ chối công việc thành công!');
             setShowDetail(false);
             setRefreshKey((k) => k + 1);
         } catch (err) {
-            alert(err?.response?.data?.message || 'Từ chối công việc thất bại');
+            showError(err?.response?.data?.message || 'Từ chối công việc thất bại');
         } finally {
             setSubmitting(false);
         }
@@ -268,19 +306,19 @@ export default function JobReviewManagement() {
                     <p className="text-sm text-gray-500">Hiển thị {start}-{end} trên {totalElements}</p>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={page <= 1}
-                            className={`h-9 w-9 rounded border ${page <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                            onClick={() => setPage((p) => Math.max(1, serverPage - 1, p - 1))}
+                            disabled={serverPage <= 1}
+                            className={`h-9 w-9 rounded border ${serverPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
                         >
                             ‹
                         </button>
                         <span className="text-sm text-gray-600">
-                            Trang {page} / {Math.max(1, totalPages)}
+                            Trang {serverPage} / {Math.max(1, totalPages)}
                         </span>
                         <button
-                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={page >= totalPages}
-                            className={`h-9 w-9 rounded border ${page >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                            onClick={() => setPage((p) => Math.min(totalPages, serverPage + 1, p + 1))}
+                            disabled={serverPage >= totalPages}
+                            className={`h-9 w-9 rounded border ${serverPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
                         >
                             ›
                         </button>
@@ -369,7 +407,7 @@ export default function JobReviewManagement() {
                                         <div className="flex items-center gap-2">
                                             <Briefcase size={16} className="text-gray-400" />
                                             <span className="text-gray-500">Danh mục:</span>
-                                            <span className="font-medium">{detail.category || '—'}</span>
+                                            <span className="font-medium">{detail.categoryName || '—'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -419,7 +457,7 @@ export default function JobReviewManagement() {
                                         {detail.workingDays && (
                                             <div>
                                                 <span className="text-gray-500">Ngày làm việc:</span>
-                                                <span className="font-medium ml-2">{detail.workingDays}</span>
+                                                <span className="font-medium ml-2">{formatWorkingDaysForDisplay(detail.workingDays)}</span>
                                             </div>
                                         )}
                                     </div>

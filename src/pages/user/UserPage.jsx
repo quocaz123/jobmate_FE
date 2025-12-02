@@ -36,12 +36,12 @@ const UserPage = () => {
                         userId: authResponse.userId
                     });
                     setShowPasswordModal(true);
-
-                    // Xóa flag sau khi đã hiển thị
-                    localStorage.removeItem('showPasswordSetup');
                 }
             } catch (error) {
                 console.error('Error parsing authResponse:', error);
+            } finally {
+                localStorage.removeItem('showPasswordSetup');
+                localStorage.removeItem('authResponse');
             }
         }
     }, []);
@@ -78,7 +78,7 @@ const UserPage = () => {
     const renderContent = () => {
         switch (activeTab) {
             case 'overview':
-                return <Dashboard />;
+                return <Dashboard onTabChange={setActiveTab} />;
             case 'find-jobs':
                 return (
                     <JobList
@@ -121,7 +121,6 @@ const UserPage = () => {
             case 'profile':
                 return (
                     <Profile
-                        userInfo={userInfo}
                         onAvatarChange={handleAvatarChange}
                         onProfileUpdate={handleProfileUpdate}
                     />

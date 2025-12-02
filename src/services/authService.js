@@ -73,3 +73,11 @@ export const setPassword = async ({ userId, password, confirmPassword }) => {
 export const register = async (data) => {
     return await httpClient.post(AUTH.REGISTER, data);
 }
+
+export const forgotPassword = async (email) => {
+    return await httpClient.post(AUTH.FORGOT_PASSWORD, { email });
+}
+
+export const resetPassword = async (request) => {
+    return await httpClient.post(AUTH.RESET_PASSWORD, request);
+}

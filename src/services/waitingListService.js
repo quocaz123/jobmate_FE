@@ -12,3 +12,7 @@ export const getMyWaitingList = async () => {
 export const deleteWaitingList = async (id) => {
     return await httpClient.delete(WAITING_LIST.DELETE_WAITING_LIST(id));
 }
+
+export const getAllWaitingLists = async (page, size) => {
+    return await httpClient.get(WAITING_LIST.GET_ALL_WAITING_LISTS, { params: { page, size } });
+}

@@ -77,7 +77,7 @@ export default function VerifyOtpPage() {
             dismissLoading(loadingToast);
             console.log(response);
 
-            showSuccess("Đăng nhập thành công!");
+            // showSuccess("Đăng nhập thành công!");
             setTimeout(() => {
                 handleAuthSuccess(response.data.data.token, navigate);
             }, 1200);

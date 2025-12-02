@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Eye, EyeOff, Mail, Lock, X, Loader2 } from "lucide-react";
 import { OAuthConfig } from "../../configurations/configuration";
-import { login } from "../../services/authService";
+import { login, forgotPassword, resetPassword } from "../../services/authService";
 import { handleAuthSuccess } from "../../services/authHandler";
 import { useNavigate } from "react-router-dom";
 import { showError, showSuccess } from "../../utils/toast";
@@ -11,6 +11,69 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Forgot password state
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: email, 2: OTP + new password
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [otpExpiryTime, setOtpExpiryTime] = useState(null);
+  const [countdown, setCountdown] = useState(null);
+  const countdownIntervalRef = useRef(null);
+
+  // Countdown timer cho OTP
+  useEffect(() => {
+    if (forgotPasswordStep === 2 && otpExpiryTime && otpExpiryTime > 0) {
+      setCountdown(otpExpiryTime);
+
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            // Hết thời gian, quay về bước 1
+            clearInterval(countdownIntervalRef.current);
+            setForgotPasswordStep(1);
+            setOtp("");
+            setOtpExpiryTime(null);
+            setCountdown(null);
+            showError("Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.");
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+        }
+      };
+    } else {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+      setCountdown(null);
+    }
+  }, [forgotPasswordStep, otpExpiryTime]);
+
+  // Cleanup khi unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const formatCountdown = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
  const handleSubmit = async (e) => {
   e.preventDefault();
@@ -141,12 +204,13 @@ export default function LoginPage() {
 
             {/* Quên mật khẩu */}
             <div className="flex justify-end">
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => setShowForgotPasswordModal(true)}
                 className="text-sm text-blue-600 hover:underline hover:text-blue-700 transition-colors"
               >
                 Quên mật khẩu?
-              </a>
+              </button>
             </div>
 
             {/* Nút đăng nhập */}
@@ -211,6 +275,304 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
+            {/* Close button */}
+            <button
+              onClick={() => {
+                if (countdownIntervalRef.current) {
+                  clearInterval(countdownIntervalRef.current);
+                }
+                setShowForgotPasswordModal(false);
+                setForgotPasswordStep(1);
+                setForgotEmail("");
+                setOtp("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setOtpExpiryTime(null);
+                setCountdown(null);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Quên mật khẩu
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">
+              {forgotPasswordStep === 1
+                ? "Nhập email của bạn để nhận mã OTP"
+                : "Nhập mã OTP và mật khẩu mới"}
+            </p>
+
+            {forgotPasswordStep === 1 ? (
+              // Step 1: Enter email
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!forgotEmail) {
+                    showError("Vui lòng nhập email");
+                    return;
+                  }
+
+                  setIsLoading(true);
+                  try {
+                    const res = await forgotPassword(forgotEmail);
+                    const data = res?.data?.data || res?.data;
+                    showSuccess(
+                      data?.message || "OTP đã được gửi đến email của bạn"
+                    );
+                    setOtpExpiryTime(data?.otpExpiryTime || 180);
+                    setForgotPasswordStep(2);
+                  } catch (error) {
+                    const errorMessage =
+                      error?.response?.data?.message ||
+                      "Không thể gửi OTP. Vui lòng thử lại.";
+                    showError(errorMessage);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-5 w-5 text-blue-500" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`w-full py-2.5 rounded-lg font-semibold transition ${
+                    isLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg"
+                  }`}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang gửi...
+                    </span>
+                  ) : (
+                    "Gửi mã OTP"
+                  )}
+                </button>
+              </form>
+            ) : (
+              // Step 2: Enter OTP and new password
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+
+                  if (!otp) {
+                    showError("Vui lòng nhập mã OTP");
+                    return;
+                  }
+
+                  if (!newPassword) {
+                    showError("Vui lòng nhập mật khẩu mới");
+                    return;
+                  }
+
+                  if (newPassword.length < 8) {
+                    showError("Mật khẩu phải có ít nhất 8 ký tự");
+                    return;
+                  }
+
+                  if (newPassword !== confirmPassword) {
+                    showError("Mật khẩu xác nhận không khớp");
+                    return;
+                  }
+
+                  setIsLoading(true);
+                  try {
+                    const res = await resetPassword({
+                      email: forgotEmail,
+                      otp: otp,
+                      newPassword: newPassword,
+                      confirmPassword: confirmPassword,
+                    });
+
+                    const data = res?.data?.data || res?.data;
+                    showSuccess(
+                      data?.message || "Đặt lại mật khẩu thành công!"
+                    );
+
+                    // Close modal and reset
+                    if (countdownIntervalRef.current) {
+                      clearInterval(countdownIntervalRef.current);
+                    }
+                    setTimeout(() => {
+                      setShowForgotPasswordModal(false);
+                      setForgotPasswordStep(1);
+                      setForgotEmail("");
+                      setOtp("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                      setOtpExpiryTime(null);
+                      setCountdown(null);
+                    }, 1500);
+                  } catch (error) {
+                    const errorMessage =
+                      error?.response?.data?.message ||
+                      "Không thể đặt lại mật khẩu. Vui lòng thử lại.";
+                    showError(errorMessage);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mã OTP
+                  </label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Nhập mã OTP 6 số"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent text-center text-lg tracking-widest"
+                    maxLength={6}
+                    required
+                    disabled={isLoading}
+                  />
+                  {countdown !== null && countdown > 0 ? (
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <p className={`text-sm font-medium ${
+                        countdown <= 30 ? "text-red-600" : "text-gray-600"
+                      }`}>
+                        Mã OTP có hiệu lực trong: <span className="font-bold">{formatCountdown(countdown)}</span>
+                      </p>
+                    </div>
+                  ) : countdown === 0 ? (
+                    <p className="text-xs text-red-600 mt-1 text-center">
+                      Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mật khẩu mới
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-5 w-5 text-purple-500" />
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Tối thiểu 8 ký tự"
+                      className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                      required
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-2.5 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                      disabled={isLoading}
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Xác nhận mật khẩu mới
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-5 w-5 text-purple-500" />
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Nhập lại mật khẩu mới"
+                      className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                      required
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-2.5 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                      disabled={isLoading}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (countdownIntervalRef.current) {
+                        clearInterval(countdownIntervalRef.current);
+                      }
+                      setForgotPasswordStep(1);
+                      setOtp("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                      setCountdown(null);
+                      setOtpExpiryTime(null);
+                    }}
+                    disabled={isLoading}
+                    className="flex-1 py-2.5 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`flex-1 py-2.5 rounded-lg font-semibold transition ${
+                      isLoading
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg"
+                    }`}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang xử lý...
+                      </span>
+                    ) : (
+                      "Đặt lại mật khẩu"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

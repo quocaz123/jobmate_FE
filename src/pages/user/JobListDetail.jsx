@@ -3,8 +3,9 @@ import { ArrowLeft, MapPin, Clock, DollarSign, Users, Star, Calendar, Building2,
 import { getJobDetailByIdForUser } from "../../services/jobService";
 import { createConversation } from "../../services/chatService";
 import ApplicationModal from "../../components/User/ApplicationModal";
+import { formatWorkingDaysForDisplay } from "../../utils/scheduleUtils";
 
-export default function JobListDetail({ id, onBack, onStartChat }) {
+export default function JobListDetail({ id, onBack, onStartChat, variant = "page", reportReason = null }) {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applied, setApplied] = useState(false);
@@ -32,8 +33,14 @@ export default function JobListDetail({ id, onBack, onStartChat }) {
     load();
   }, [id]);
 
+  const isModal = variant === "modal";
+
   if (loading) {
-    return <div className="p-6 text-center text-gray-500">Đang tải chi tiết công việc...</div>;
+    return (
+      <div className={isModal ? "p-6 text-center text-gray-500" : "p-6 text-center text-gray-500"}>
+        Đang tải chi tiết công việc...
+      </div>
+    );
   }
 
   const handleStartChat = async () => {
@@ -51,12 +58,14 @@ export default function JobListDetail({ id, onBack, onStartChat }) {
     return (
       <div className="p-6 text-center text-gray-500">
         <p>Không tìm thấy công việc.</p>
-        <button
-          onClick={onBack}
-          className="mt-4 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
-        >
-          ← Quay lại
-        </button>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="mt-4 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+          >
+            ← Quay lại
+          </button>
+        )}
       </div>
     );
   }
@@ -94,13 +103,15 @@ export default function JobListDetail({ id, onBack, onStartChat }) {
   const benefitsArr = toList(job.benefits);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className={`${isModal ? "bg-white p-4" : "min-h-screen bg-gray-50 p-6"}`}>
       {/* Header actions */}
-      <div className="max-w-5xl mx-auto mb-4">
+      <div className={`${isModal ? "max-w-5xl mx-auto mb-4" : "max-w-5xl mx-auto mb-4"}`}>
         <div className="flex items-center gap-2">
-          <button onClick={onBack} className="px-3 py-2 text-sm rounded border bg-white hover:bg-gray-50 flex items-center gap-2">
-            <ArrowLeft size={16} /> Quay lại
-          </button>
+          {onBack && (
+            <button onClick={onBack} className="px-3 py-2 text-sm rounded border bg-white hover:bg-gray-50 flex items-center gap-2">
+              <ArrowLeft size={16} /> Quay lại
+            </button>
+          )}
           <div className="flex-1" />
           <button onClick={handleStartChat} className="px-3 py-2 text-sm rounded border bg-white hover:bg-gray-50 flex items-center gap-2">
             <MessageCircle size={16} /> Chat với nhà tuyển dụng
@@ -140,7 +151,7 @@ export default function JobListDetail({ id, onBack, onStartChat }) {
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400 mt-2">
                   {job.workingHours && <span>Giờ làm: {job.workingHours}</span>}
-                  {job.workingDays && <span>Ngày làm: {job.workingDays}</span>}
+                  {job.workingDays && <span>Ngày làm: {formatWorkingDaysForDisplay(job.workingDays)}</span>}
                   {job.workMode && <span>Hình thức: {job.workMode}</span>}
                   {job.category && <span>Ngành: {job.category}</span>}
                   {typeof job.viewsCount === 'number' && <span>{job.viewsCount} lượt xem</span>}
@@ -204,17 +215,27 @@ export default function JobListDetail({ id, onBack, onStartChat }) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <button disabled={applied} onClick={() => setShowModal(true)} className="w-full mb-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
-              {applied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
-            </button>
-            <div className="text-center text-sm text-gray-500">
-              {job.deadline && (
-                <p>Hạn nộp hồ sơ: <span className="font-medium">{new Date(job.deadline).toLocaleDateString('vi-VN')}</span></p>
-              )}
-              <p className="mt-1">{applicants} người đã ứng tuyển</p>
+          {!reportReason ? (
+            <div className="bg-white rounded-lg shadow p-6">
+              <button disabled={applied} onClick={() => setShowModal(true)} className="w-full mb-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+                {applied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
+              </button>
+              <div className="text-center text-sm text-gray-500">
+                {job.deadline && (
+                  <p>Hạn nộp hồ sơ: <span className="font-medium">{new Date(job.deadline).toLocaleDateString('vi-VN')}</span></p>
+                )}
+                <p className="mt-1">{applicants} người đã ứng tuyển</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="border-b pb-3 mb-3">
+                <h2 className="font-semibold text-lg">Lý do bị báo cáo</h2>
+                <p className="text-sm text-gray-500 mt-1">Được cung cấp bởi người dùng</p>
+              </div>
+              <p className="text-sm text-gray-700 whitespace-pre-line">{reportReason}</p>
+            </div>
+          )}
 
           <div className="bg-white rounded-lg shadow">
             <div className="border-b px-6 py-4"><h2 className="font-semibold">Thông tin nhà tuyển dụng</h2></div>
@@ -282,7 +303,7 @@ export default function JobListDetail({ id, onBack, onStartChat }) {
       </div>
 
       {/* Application Modal */}
-      {job && (
+      {job && !reportReason && (
         <ApplicationModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}

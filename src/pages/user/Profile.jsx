@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Mail,
   MapPin,
@@ -17,113 +17,171 @@ import TwoFactorTab from "./ProfileTabs/TwoFactorTab";
 import VerifyCCCDTab from "./ProfileTabs/VerifyCCCDTab";
 import ReviewsTab from "./ProfileTabs/ReviewsTab";
 import CareerInfoTab from "./ProfileTabs/CareerInfoTab";
+import LocationPickerModal from "../../components/common/LocationPickerModal";
 import { uploadFile } from "../../services/uploadFileService";
-import { getUserInfo, updateUserInfo, updateTwoFactorStatus } from "../../services/userService";
+import { getUserInfo, updateUserInfo, updateTwoFactorStatus, upgradeRole } from "../../services/userService";
+import { logout } from "../../services/authService";
+import { removeToken } from "../../services/localStorageService";
 import { showSuccess, showError } from "../../utils/toast";
+import { formatWorkingDaysForDisplay } from "../../utils/scheduleUtils";
+
+const HERE_API_KEY = (typeof import.meta !== "undefined" && import.meta.env?.VITE_HERE_API_KEY) || "";
 
 // Dữ liệu mẫu (thay bằng API sau)
 const MOCK_USER = {
-  fullName: "John Doe Updated",
-  email: "quocthangbinh2345@gmail.com",
-  address: "33 Lão Bạng, Hải Châu , Đà Nẵng",
-  avatarUrl: "",
-  roles: [{ name: "USER", description: "Người dùng hệ thống" }],
-  verificationStatus: "VERIFIED",
-  status: "ACTIVE",
-  createdAt: "2025-10-25T17:28:07.042378",
-  updatedAt: "2025-10-25T17:31:06.676253",
-  university: "ĐH Duy Tân",
-  major: "Kỹ thuật phần mềm",
-  year: "Năm 4",
-  gpa: "3.6",
-  about:
-    "Tôi là sinh viên năm cuối ngành Kỹ thuật phần mềm, có niềm đam mê với phát triển web và thiết kế UI/UX.",
-  // Mock data cho rating và CCCD
   averageRating: 4.9,
   ratingCount: 12,
   cccdVerified: true,
-  // Mock data cho thông tin công việc
-  preferredJobType: "PART_TIME",
-  availableDays: "Thứ 2, 3, 4, 5, 6",
-  availableTime: "18:00 - 22:00",
-  // Mock data cho skills
-  skills: "React, JavaScript, Node.js, Python, UI/UX Design",
-  // Mock data cho experience
-  experiences: [
-    {
-      title: "Frontend Developer",
-      company: "Công ty ABC",
-      period: "2023 - Hiện tại",
-      description: "Phát triển ứng dụng web với React và TypeScript"
-    }
-  ],
-  // Mock data cho reviews
-  reviews: [
-    {
-      id: 1,
-      jobTitle: "Nhà hàng Italia",
-      date: "10/1/2024",
-      comment: "Làm việc chăm chỉ, nhiệt tình với khách hàng",
-      rating: 4.8
-    },
-    {
-      id: 2,
-      jobTitle: "Trung tâm gia sư ABC",
-      date: "5/1/2024",
-      comment: "Giảng dạy tốt, học sinh tiến bộ rõ rệt",
-      rating: 5.0
-    }
-  ]
 };
 
-const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
+const extractAvatarUrl = (data = {}) =>
+  data.avatarUrl ||
+  data.avatar ||
+  data.profilePicture ||
+  data.photoUrl ||
+  data.photoURL ||
+  null;
+
+const normalizeCoord = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const num = Number(value);
+  return Number.isNaN(num) ? null : num;
+};
+
+const Profile = ({ onAvatarChange, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
   const [activeTab, setActiveTab] = useState("info"); // "info", "2fa", "verify", "reviews"
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [isEmployer, setIsEmployer] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isUpgradeSubmitting, setIsUpgradeSubmitting] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  const avatarChangeRef = useRef(onAvatarChange);
+  const profileUpdateRef = useRef(onProfileUpdate);
 
   useEffect(() => {
-    console.log("Received userInfo:", userInfo);
-    if (userInfo) {
-      const initialTwoFa =
-        userInfo.twoFaEnabled ??
-        userInfo.twoFactorEnabled ??
-        userInfo.isTwoFaEnabled ??
-        false;
-
-      setProfile({
-        ...MOCK_USER, // fallback nếu thiếu field
-        ...userInfo, // dữ liệu thực từ API ưu tiên hơn
-      });
-
-      setTwoFactorEnabled(Boolean(initialTwoFa));
-    }
-    setAvatarError(false);
-  }, [userInfo]);
+    avatarChangeRef.current = onAvatarChange;
+  }, [onAvatarChange]);
 
   useEffect(() => {
-    if (userInfo?.avatarUrl) {
-      setProfile((prev) => (prev ? { ...prev, avatarUrl: userInfo.avatarUrl } : prev));
+    profileUpdateRef.current = onProfileUpdate;
+  }, [onProfileUpdate]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await getUserInfo();
+        const data = res?.data?.data || res?.data;
+        if (!data) return;
+        const normalizedAvatarUrl = extractAvatarUrl(data);
+        const normalizedLatitude = normalizeCoord(data.latitude ?? data.lat);
+        const normalizedLongitude = normalizeCoord(data.longitude ?? data.lon ?? data.lng);
+        const initialTwoFa =
+          data.twoFaEnabled ??
+          data.twoFactorEnabled ??
+          data.isTwoFaEnabled ??
+          false;
+        setProfile({
+          ...MOCK_USER,
+          ...data,
+          avatarUrl: normalizedAvatarUrl,
+          latitude: normalizedLatitude,
+          longitude: normalizedLongitude,
+        });
+        setTwoFactorEnabled(Boolean(initialTwoFa));
+        const employer = Array.isArray(data.roles)
+          ? data.roles.some((role) => role.name?.toUpperCase() === "EMPLOYER")
+          : false;
+        setIsEmployer(employer);
+        if (normalizedAvatarUrl && avatarChangeRef.current) {
+          avatarChangeRef.current(normalizedAvatarUrl);
+        }
+        if (profileUpdateRef.current) {
+          profileUpdateRef.current({
+            ...data,
+            avatarUrl: normalizedAvatarUrl,
+            latitude: normalizedLatitude,
+            longitude: normalizedLongitude,
+          });
+        }
+      } catch (err) {
+        console.error("Không thể tải thông tin người dùng:", err);
+      } finally {
+        setAvatarError(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    if (isEmployer && activeTab === "career") {
+      setActiveTab("info");
     }
-  }, [userInfo?.avatarUrl]);
+  }, [isEmployer, activeTab]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleOpenAddressPicker = () => {
+    if (!isEditing) return;
+    setIsLocationModalOpen(true);
+  };
+
+  const handleSelectAddress = (address, lat, lon) => {
+    const normalizedLat = normalizeCoord(lat);
+    const normalizedLon = normalizeCoord(lon);
+    setProfile((prev) =>
+      prev
+        ? {
+          ...prev,
+          address,
+          latitude: normalizedLat ?? prev.latitude,
+          longitude: normalizedLon ?? prev.longitude,
+        }
+        : prev
+    );
+    setIsLocationModalOpen(false);
+  };
+
   const handleSave = async () => {
     if (!profile) return;
 
     try {
-      const res = await updateUserInfo(profile);
-      const updatedProfile = res?.data?.data ? { ...profile, ...res.data.data } : profile;
+      const payload = {
+        ...profile,
+        latitude: normalizeCoord(profile.latitude),
+        longitude: normalizeCoord(profile.longitude),
+        // Đảm bảo preferredSalaryUnit có giá trị mặc định nếu chưa có
+        preferredSalaryUnit: profile.preferredSalaryUnit || "VND_PER_HOUR",
+      };
+      const res = await updateUserInfo(payload);
+      const serverProfile = res?.data?.data || res?.data || null;
+      const normalizedAvatarUrl = serverProfile ? extractAvatarUrl(serverProfile) : payload.avatarUrl;
+      const normalizedLatitude = serverProfile
+        ? normalizeCoord(serverProfile.latitude ?? serverProfile.lat)
+        : payload.latitude;
+      const normalizedLongitude = serverProfile
+        ? normalizeCoord(serverProfile.longitude ?? serverProfile.lon ?? serverProfile.lng)
+        : payload.longitude;
+      const updatedProfile = serverProfile
+        ? {
+          ...profile,
+          ...serverProfile,
+          avatarUrl: normalizedAvatarUrl,
+          latitude: normalizedLatitude,
+          longitude: normalizedLongitude,
+        }
+        : { ...payload, avatarUrl: normalizedAvatarUrl };
 
       setProfile(updatedProfile);
 
-      if (updatedProfile.avatarUrl && onAvatarChange) {
+      if (normalizedAvatarUrl && onAvatarChange) {
         onAvatarChange(updatedProfile.avatarUrl);
       }
 
@@ -141,7 +199,7 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
     new Date(dateStr).toLocaleDateString("vi-VN");
 
   const verificationStatusRaw =
-    userInfo?.verificationStatus || profile?.verificationStatus || "UNVERIFIED";
+    profile?.verificationStatus || "UNVERIFIED";
   const verificationStatus = verificationStatusRaw.toUpperCase();
 
   const VERIFICATION_BADGES = {
@@ -169,15 +227,56 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
 
   const verificationBadge = VERIFICATION_BADGES[verificationStatus] || null;
   const verificationReason =
-    userInfo?.verificationReason ||
     profile?.verificationReason ||
-    userInfo?.verificationNote ||
-    profile?.verificationNote ||
-    userInfo?.verificationMessage ||
     profile?.verificationMessage ||
-    userInfo?.verificationRemark ||
     profile?.verificationRemark ||
     "";
+
+  const isProfileComplete = Boolean(
+    profile?.fullName &&
+    profile?.contactPhone &&
+    profile?.address
+  );
+
+  const isVerified = verificationStatus === "VERIFIED";
+  const canRequestEmployerUpgrade = isProfileComplete && isVerified;
+
+  const handleUpgradeRequest = async () => {
+    if (!canRequestEmployerUpgrade) {
+      showError(
+        "Vui lòng cập nhật đầy đủ thông tin cá nhân và hoàn tất xác minh CCCD trước khi gửi yêu cầu."
+      );
+      return;
+    }
+    if (!profile?.id) {
+      showError("Không tìm thấy mã người dùng.");
+      return;
+    }
+
+    try {
+      setIsUpgradeSubmitting(true);
+      await upgradeRole(profile.id);
+      showSuccess("Nâng cấp nhà tuyển dụng thành công! Vui lòng đăng nhập lại.");
+      setIsUpgradeModalOpen(false);
+
+      // Delay logout to allow toast/overlay to be seen
+      setTimeout(async () => {
+        try {
+          await logout();
+        } catch (logoutErr) {
+          console.warn("Lỗi khi gọi API logout:", logoutErr);
+        } finally {
+          removeToken();
+          window.location.href = "/login";
+        }
+      }, 1500);
+    } catch (error) {
+      console.error("Không thể gửi yêu cầu nâng cấp:", error);
+      showError("Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.");
+    } finally {
+      setIsUpgradeSubmitting(false);
+    }
+  };
 
   const handleToggleTwoFactor = async (targetState) => {
     if (twoFactorLoading || targetState === twoFactorEnabled) {
@@ -252,18 +351,29 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
             Quản lý thông tin và hồ sơ của bạn
           </p>
         </div>
-        <button
-          onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-          disabled={isEditDisabled}
-          className={`px-4 py-2 rounded-lg transition ${isEditDisabled
-            ? "bg-gray-400 text-white cursor-not-allowed"
-            : isEditing
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-cyan-600 text-white hover:bg-cyan-700"
-            }`}
-        >
-          {isEditing ? "Lưu thay đổi" : "Chỉnh sửa"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {!isEmployer && (
+            <button
+              type="button"
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="px-4 py-2 rounded-lg border border-cyan-600 text-cyan-700 hover:bg-cyan-50 transition"
+            >
+              Nâng cấp nhà tuyển dụng
+            </button>
+          )}
+          <button
+            onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
+            disabled={isEditDisabled}
+            className={`px-4 py-2 rounded-lg transition ${isEditDisabled
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : isEditing
+                ? "bg-green-600 text-white hover:bg-green-700"
+                : "bg-cyan-600 text-white hover:bg-cyan-700"
+              }`}
+          >
+            {isEditing ? "Lưu thay đổi" : "Chỉnh sửa"}
+          </button>
+        </div>
       </div>
 
       {/* Hồ sơ chính */}
@@ -299,8 +409,9 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
 
                     try {
                       const uploadRes = await uploadFile(file, "AVATAR");
+                      console.log("Kết quả upload avatar:", uploadRes);
 
-                      const newAvatarUrl = uploadRes?.url || uploadRes?.fileUrl || uploadRes;
+                      const newAvatarUrl = uploadRes;
 
                       setProfile(prev => ({
                         ...prev,
@@ -326,9 +437,7 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
             <h2 className="font-semibold text-lg text-gray-800">
               {profile.fullName}
             </h2>
-            <p className="text-gray-500 text-sm">
-              {profile.major || "Chưa cập nhật chuyên ngành"}
-            </p>
+
 
             {/* Rating và Verification Bar */}
             <div className="flex flex-wrap items-center justify-center gap-3 mt-3 mb-3 px-2">
@@ -340,14 +449,14 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
                 </span>
               )}
 
-              {profile.averageRating && profile.averageRating > 0 && (
+              {profile.trustScore && profile.trustScore > 0 && (
                 <div className="flex items-center gap-1 text-sm">
                   <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                   <span className="font-medium text-gray-800">
-                    {profile.averageRating.toFixed(1)}
+                    {profile.trustScore.toFixed(1)}
                   </span>
                   <span className="text-gray-500 text-xs">
-                    ({profile.ratingCount || 0} đánh giá)
+                    ({profile.reviewCount || 0} đánh giá)
                   </span>
                 </div>
               )}
@@ -366,7 +475,7 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
                 )}
                 {profile.availableDays && (
                   <span className="bg-indigo-100 text-indigo-700 text-xs px-3 py-1 rounded-full">
-                    {profile.availableDays}
+                    {formatWorkingDaysForDisplay(profile.availableDays)}
                   </span>
                 )}
                 {profile.availableTime && (
@@ -416,13 +525,13 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
                 <span className="flex items-center gap-2">
                   <Percent size={16} /> Tỷ lệ hoàn thành
                 </span>
-                <span className="font-semibold text-gray-800">95%</span>
+                <span className="font-semibold text-gray-800">96%</span>
               </li>
               <li className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Star size={16} /> Đánh giá trung bình
                 </span>
-                <span className="font-semibold text-gray-800">4.9/5.0</span>
+                <span className="font-semibold text-gray-800">{profile.trustScore.toFixed(1)}/5.0</span>
               </li>
             </ul>
           </div>
@@ -434,7 +543,7 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
           <div className="bg-gray-100 rounded-lg p-1 flex gap-1">
             {[
               { id: "info", label: "Thông tin cá nhân" },
-              { id: "career", label: "Thông tin việc làm" },
+              ...(!isEmployer ? [{ id: "career", label: "Thông tin việc làm" }] : []),
               { id: "2fa", label: "Bật 2FA" },
               { id: "verify", label: "Xác minh CCCD" },
               { id: "reviews", label: "Đánh giá" }
@@ -459,10 +568,11 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
                 profile={profile}
                 isEditing={isEditing}
                 handleChange={handleChange}
+                onAddressPickerOpen={handleOpenAddressPicker}
               />
             )}
 
-            {activeTab === "career" && (
+            {!isEmployer && activeTab === "career" && (
               <CareerInfoTab
                 profile={profile}
                 isEditing={isEditing}
@@ -509,12 +619,67 @@ const Profile = ({ userInfo, onAvatarChange, onProfileUpdate }) => {
               />
             )}
 
-            {activeTab === "reviews" && (
-              <ReviewsTab userId={userInfo?.id || profile?.id} />
+            {activeTab === "reviews" && profile?.id && (
+              <ReviewsTab userId={profile.id} />
             )}
           </div>
         </div>
       </div>
+      {isUpgradeModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-5">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Nâng cấp tài khoản nhà tuyển dụng
+              </h2>
+              <p className="text-gray-600 mt-1">
+                Hãy đảm bảo bạn đã cập nhật hồ sơ và hoàn tất xác minh CCCD trước khi gửi yêu cầu.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className={`p-3 rounded-lg ${isProfileComplete ? "bg-green-50 border border-green-200" : "bg-yellow-50 border border-yellow-200"}`}>
+                <p className="font-medium text-sm text-gray-800">
+                  {isProfileComplete ? "✓ Thông tin cá nhân đã đầy đủ" : "• Vui lòng cập nhật đầy đủ họ tên, số điện thoại và địa chỉ"}
+                </p>
+              </div>
+              <div className={`p-3 rounded-lg ${isVerified ? "bg-green-50 border border-green-200" : "bg-yellow-50 border border-yellow-200"}`}>
+                <p className="font-medium text-sm text-gray-800">
+                  {isVerified ? "✓ Đã xác minh CCCD" : "• Cần hoàn tất xác minh CCCD trong tab Xác minh"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsUpgradeModalOpen(false)}
+                className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleUpgradeRequest}
+                disabled={!canRequestEmployerUpgrade || isUpgradeSubmitting}
+                className={`px-4 py-2 rounded-lg text-white ${canRequestEmployerUpgrade && !isUpgradeSubmitting
+                  ? "bg-cyan-600 hover:bg-cyan-700"
+                  : "bg-gray-400 cursor-not-allowed"
+                  }`}
+              >
+                {isUpgradeSubmitting ? "Đang xử lý..." : "Gửi yêu cầu"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <LocationPickerModal
+        open={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        defaultQuery={profile?.address || ""}
+        onSelect={handleSelectAddress}
+        hereApiKey={HERE_API_KEY}
+      />
     </div>
   );
 };

@@ -13,8 +13,11 @@ import {
   Star,
   BadgeCheck,
   MapPin as MapPinIcon,
+  X,
+  Loader2,
 } from 'lucide-react';
-import { getAllUsers } from '../../services/userService';
+import { getAllUsers, updateUserStatus } from '../../services/userService';
+import { showSuccess, showError } from '../../utils/toast';
 
 const ROLE_TABS = [
   { key: 'USER', label: 'Sinh viên', icon: Users, description: 'Quản lý tài khoản sinh viên' },
@@ -168,6 +171,9 @@ const UsersManagement = () => {
   const [serverTotalPages, setServerTotalPages] = useState(1);
   const [serverTotalElements, setServerTotalElements] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(null);
+  const [statusModal, setStatusModal] = useState({ open: false, user: null, action: null });
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -241,6 +247,56 @@ const UsersManagement = () => {
   const handleCloseDetail = () => {
     setShowUserModal(false);
     setSelectedUser(null);
+  };
+
+  const handleOpenStatusModal = (user, action) => {
+    setStatusModal({ open: true, user, action });
+    setReason('');
+  };
+
+  const handleCloseStatusModal = () => {
+    setStatusModal({ open: false, user: null, action: null });
+    setReason('');
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusModal.user || !statusModal.action) return;
+
+    const { user, action } = statusModal;
+    const newStatus = action === 'unlock' ? 'ACTIVE' : 'BANNED';
+    
+    // Nếu đang khóa và chưa có lý do, yêu cầu nhập lý do
+    if (action === 'lock' && !reason.trim()) {
+      showError('Vui lòng nhập lý do khóa tài khoản.');
+      return;
+    }
+
+    setUpdatingStatus(user.id);
+    try {
+      await updateUserStatus(user.id, newStatus, reason.trim());
+      showSuccess(
+        action === 'unlock' 
+          ? `Đã mở khóa tài khoản ${user.fullName}` 
+          : `Đã khóa tài khoản ${user.fullName}`
+      );
+      
+      // Refresh danh sách users
+      const apiStatus = statusFilter === 'all' ? undefined : statusFilter;
+      const pageIndex = Math.max(0, (currentPage || 1) - 1);
+      const response = await getAllUsers(pageIndex, PAGE_SIZE, apiStatus, activeRole);
+      const payload = response?.data ?? response;
+      const pageData = payload?.data ?? {};
+      const entries = toArray(pageData?.data ?? pageData);
+      const normalized = entries.map((item) => normalizeUser(item, activeRole));
+      setUsers(normalized);
+      
+      handleCloseStatusModal();
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái:', error);
+      showError(error?.response?.data?.message || 'Không thể cập nhật trạng thái. Vui lòng thử lại.');
+    } finally {
+      setUpdatingStatus(null);
+    }
   };
 
   return (
@@ -369,8 +425,8 @@ const UsersManagement = () => {
                   </td>
                 </tr>
               ) : (
-                pageUsers.filter(user => user != null).map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                pageUsers.filter(user => user != null).map((user, index) => (
+                  <tr key={`user-${user.id}-${index}`} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {user.avatarUrl ? (
@@ -470,20 +526,45 @@ const UsersManagement = () => {
                           <Eye className="h-4 w-4" />
                           Xem
                         </button>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
-                        >
-                          <Unlock className="h-4 w-4" />
-                          Mở
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                        >
-                          <Lock className="h-4 w-4" />
-                          Khóa
-                        </button>
+                        {user.status === 'BANNED' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStatusModal(user, 'unlock')}
+                            disabled={updatingStatus === user.id}
+                            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+                          >
+                            {updatingStatus === user.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Đang xử lý...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="h-4 w-4" />
+                                <span>Mở</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStatusModal(user, 'lock')}
+                            disabled={updatingStatus === user.id}
+                            className="inline-flex items-center gap-2 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                          >
+                            {updatingStatus === user.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Đang xử lý...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="h-4 w-4" />
+                                <span>Khóa</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -684,6 +765,85 @@ const UsersManagement = () => {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Update Modal */}
+      {statusModal.open && statusModal.user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={handleCloseStatusModal}>
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {statusModal.action === 'lock' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  {statusModal.user.fullName} ({statusModal.user.email})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseStatusModal}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4">
+              {statusModal.action === 'lock' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Lý do khóa tài khoản <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={4}
+                    placeholder="Nhập lý do khóa tài khoản..."
+                    className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+              )}
+
+              {statusModal.action === 'unlock' && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-sm text-emerald-700">
+                    Bạn có chắc muốn mở khóa tài khoản này? Người dùng sẽ có thể đăng nhập và sử dụng hệ thống bình thường.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCloseStatusModal}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdateStatus}
+                  disabled={updatingStatus === statusModal.user.id || (statusModal.action === 'lock' && !reason.trim())}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+                    statusModal.action === 'lock'
+                      ? 'bg-rose-600 hover:bg-rose-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                >
+                  {updatingStatus === statusModal.user.id ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </span>
+                  ) : (
+                    statusModal.action === 'lock' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'
+                  )}
+                </button>
               </div>
             </div>
           </div>
