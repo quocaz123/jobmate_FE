@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { AlertCircle, FileText, Check, X } from "lucide-react";
 import { applyJob } from "../../services/applicationService";
+import { showError, showSuccess, showWarning } from "../../utils/toast";
 
 const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInfo }) => {
   const [coverLetter, setCoverLetter] = useState("");
@@ -34,7 +35,7 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
       } else if (selectedResume === "profile") {
         if (!hasResume) {
           setIsSubmitting(false);
-          alert("Vui lòng tải lên CV trong hồ sơ trước khi sử dụng tùy chọn này.");
+          showWarning("Vui lòng tải lên CV trong hồ sơ trước khi sử dụng tùy chọn này.");
           return;
         }
         resumeFileToSend = null;
@@ -59,8 +60,7 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
     } catch (error) {
       console.error("Lỗi khi ứng tuyển:", error);
       setIsSubmitting(false);
-      // TODO: Hiển thị thông báo lỗi cho người dùng
-      alert(error?.response?.data?.message || "Có lỗi xảy ra khi ứng tuyển. Vui lòng thử lại.");
+      showError(error?.response?.data?.message || "Có lỗi xảy ra khi ứng tuyển. Vui lòng thử lại.");
     }
   };
 
@@ -74,14 +74,13 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId, onSuccess, userInf
     }
   };
 
-  // ✅ Lấy thông tin resume từ userInfo
+  // Lấy thông tin resume từ userInfo
   const profileResume = userInfo?.resume || null;
   const hasResume = Boolean(
     profileResume &&
     (profileResume.fileName || profileResume.id)
   );
-
-  // ✅ useEffect phải được gọi trước early return để tuân thủ Rules of Hooks
+  
   useEffect(() => {
     if (isOpen && hasResume) {
       setSelectedResume("profile");

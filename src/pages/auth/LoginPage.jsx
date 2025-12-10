@@ -138,7 +138,7 @@ export default function LoginPage() {
         {/* Logo + Tiêu đề */}
         <div className="relative text-center p-8">
           <div className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2">
-            StudentJobs
+            JobMate
           </div>
           <p className="text-gray-500 text-sm">
             Nền tảng giúp sinh viên kết nối cơ hội việc làm tốt nhất.

@@ -11,6 +11,7 @@ import ApplicationDetail from './ApplicationDetail';
 import JobRequest from './JobRequest';
 import Profile from './Profile';
 import MessagesPage from '../Common/MessagePage';
+import logoImg from '../../assets/logo.jpg';
 
 const UserPage = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -143,7 +144,7 @@ const UserPage = () => {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 menuItems={userMenuItems}
-                logo="/vite.svg"
+                logo={logoImg}
                 logoText="JobMate"
                 avatarUrl={avatarUrl}
             >

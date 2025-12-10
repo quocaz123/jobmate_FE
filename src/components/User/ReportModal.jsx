@@ -13,7 +13,7 @@ const ReportModal = ({ isOpen, onClose, targetType, targetId, targetTitle }) => 
         e.preventDefault();
 
         if (!reason.trim()) {
-            alert("Vui lòng nhập lý do báo cáo");
+            showWarning("Vui lòng nhập lý do báo cáo");
             return;
         }
 

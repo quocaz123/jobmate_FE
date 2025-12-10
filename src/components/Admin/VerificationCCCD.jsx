@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Eye, Calendar, Check, X } from 'lucide-react';
 import { getPendingVerifications, getVerificationDetail, approveVerification, rejectVerification } from '../../services/verificationService';
-
+import { showError, showSuccess, showWarning } from '../../utils/toast';
 const PAGE_SIZE = 10;
 
 export default function VerificationCCCD() {
@@ -72,7 +72,7 @@ export default function VerificationCCCD() {
             setActionType(null);
             setRejectReason('');
         } catch (err) {
-            alert(err?.response?.data?.message || 'Không tải được chi tiết xác minh');
+            showError(err?.response?.data?.message || 'Không tải được chi tiết xác minh');
         }
     };
 
@@ -277,7 +277,7 @@ export default function VerificationCCCD() {
                                             }
                                             if (!detail?.userId) return;
                                             if (!rejectReason.trim()) {
-                                                alert('Vui lòng nhập lý do từ chối.');
+                                                showWarning('Vui lòng nhập lý do từ chối.');
                                                 return;
                                             }
                                             try {
@@ -286,7 +286,7 @@ export default function VerificationCCCD() {
                                                 setShowDetail(false);
                                                 setRefreshKey((k) => k + 1);
                                             } catch (err) {
-                                                alert(err?.response?.data?.message || 'Từ chối thất bại');
+                                                showError(err?.response?.data?.message || 'Từ chối thất bại');
                                             } finally {
                                                 setSubmitting(false);
                                             }
@@ -305,7 +305,7 @@ export default function VerificationCCCD() {
                                                 setShowDetail(false);
                                                 setRefreshKey((k) => k + 1);
                                             } catch (err) {
-                                                alert(err?.response?.data?.message || 'Xác minh thất bại');
+                                                showError(err?.response?.data?.message || 'Xác minh thất bại');
                                             } finally {
                                                 setSubmitting(false);
                                             }

@@ -31,6 +31,7 @@ export const USER = {
     GET_USER_TOP10: "/jobmate/users/top-10",
     GET_LOCATION: "/jobmate/users/locations",
     AUTO_COMPLETE_LOCATION: "/jobmate/users/location/auto",
+    GET_USER_STATS: "/jobmate/users/my-stats",
     SET_PASSWORD: "/jobmate/auth/set-password",
     UPDATE_PASSWORD: "/jobmate/users/password",
     UPGRADE_ROLE: (userId) => `/jobmate/users/${userId}/upgrade-employer`,

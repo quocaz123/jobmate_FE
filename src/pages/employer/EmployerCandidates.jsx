@@ -10,6 +10,7 @@ import CandidateCard from '../../components/Employer/CandidateCard'
 import ApplicationDetailModal from '../../components/Employer/ApplicationDetailModal'
 import ReviewsModal from '../../components/Employer/ReviewsModal'
 import RejectModal from '../../components/Employer/RejectModal'
+import { showSuccess, showError, showWarning } from '../../utils/toast'
 
 export default function EmployerCandidates({ jobId, onStartChat }) {
   const [candidates, setCandidates] = useState([])
@@ -136,7 +137,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
       }
     } catch (error) {
       console.error("Lỗi khi tạo conversation:", error)
-      alert(error?.response?.data?.message || "Không thể tạo cuộc trò chuyện. Vui lòng thử lại.")
+      showError(error?.response?.data?.message || "Không thể tạo cuộc trò chuyện. Vui lòng thử lại.")
     }
   }
 
@@ -151,7 +152,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
     } catch (error) {
       console.error("Lỗi khi tải chi tiết ứng tuyển:", error)
       setApplicationDetail(null)
-      alert(error?.response?.data?.message || "Không thể tải chi tiết hồ sơ. Vui lòng thử lại.")
+      showError(error?.response?.data?.message || "Không thể tải chi tiết hồ sơ. Vui lòng thử lại.")
     } finally {
       setLoadingDetail(false)
     }
@@ -164,7 +165,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
 
   const handleViewResume = async () => {
     if (!applicationDetail?.applicantId || !applicationDetail?.hasResume) {
-      alert("Không có CV để xem.")
+      showWarning("Không có CV để xem.")
       return
     }
 
@@ -176,11 +177,11 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
         // Mở CV trong tab mới
         window.open(cvUrl, '_blank')
       } else {
-        alert("Không thể lấy link CV. Vui lòng thử lại.")
+        showError("Không thể lấy link CV. Vui lòng thử lại.")
       }
     } catch (error) {
       console.error("Lỗi khi lấy link CV:", error)
-      alert(error?.response?.data?.message || "Không thể lấy link CV. Vui lòng thử lại.")
+      showError(error?.response?.data?.message || "Không thể lấy link CV. Vui lòng thử lại.")
     }
   }
 
@@ -208,7 +209,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
       setIsReviewsModalOpen(true)
     } catch (error) {
       console.error("Lỗi khi lấy đánh giá:", error)
-      alert(error?.response?.data?.message || "Không thể tải đánh giá. Vui lòng thử lại.")
+      showError(error?.response?.data?.message || "Không thể tải đánh giá. Vui lòng thử lại.")
       setReviews([])
     }
   }
@@ -226,12 +227,12 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
     try {
       setIsUpdating(true)
       await updateApplicationStatus(applicationId, 'ACCEPTED')
-      alert("Đã chấp nhận ứng viên thành công!")
+      showSuccess("Đã chấp nhận ứng viên thành công!")
       // Reload danh sách ứng viên
       await loadCandidates(filter === 'all' ? null : filter)
     } catch (error) {
       console.error("Lỗi khi chấp nhận ứng viên:", error)
-      alert(error?.response?.data?.message || "Không thể chấp nhận ứng viên. Vui lòng thử lại.")
+      showError(error?.response?.data?.message || "Không thể chấp nhận ứng viên. Vui lòng thử lại.")
     } finally {
       setIsUpdating(false)
     }
@@ -249,7 +250,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
     try {
       setIsUpdating(true)
       await updateApplicationStatus(selectedApplicationForReject, 'REJECTED', rejectionReason || null)
-      alert("Đã từ chối ứng viên thành công!")
+      showSuccess("Đã từ chối ứng viên thành công!")
       setIsRejectModalOpen(false)
       setSelectedApplicationForReject(null)
       setRejectionReason('')
@@ -257,7 +258,7 @@ export default function EmployerCandidates({ jobId, onStartChat }) {
       await loadCandidates(filter === 'all' ? null : filter)
     } catch (error) {
       console.error("Lỗi khi từ chối ứng viên:", error)
-      alert(error?.response?.data?.message || "Không thể từ chối ứng viên. Vui lòng thử lại.")
+      showError(error?.response?.data?.message || "Không thể từ chối ứng viên. Vui lòng thử lại.")
     } finally {
       setIsUpdating(false)
     }

@@ -6,46 +6,64 @@ const steps = [
   {
     id: 1,
     icon: <Search className="w-8 h-8" />,
-    title: "Tìm kiếm thông minh",
+    title: "Tìm việc nhanh chóng",
     description:
-      "AI phân tích kỹ năng, lịch học và vị trí để gợi ý công việc phù hợp nhất",
-    details: ["Lọc theo khoảng cách", "Phù hợp lịch học", "Gợi ý dựa trên kỹ năng"],
+      "Hệ thống tự động gợi ý việc làm phù hợp dựa trên hồ sơ và mong muốn của bạn",
+    details: [
+      "Lọc theo khu vực",
+      "Chọn mức lương mong muốn",
+      "Gợi ý việc làm theo kỹ năng"
+    ],
   },
   {
     id: 2,
     icon: <Calendar className="w-8 h-8" />,
-    title: "Đồng bộ lịch học",
-    description: "Kết nối Google Calendar để tránh trùng lịch khi đi làm",
-    details: ["Import từ Google", "Tự động kiểm tra", "Thông báo xung đột"],
+    title: "Nhận thông báo tự động",
+    description:
+      "Luôn được cập nhật khi có nhà tuyển dụng xem hồ sơ hoặc phản hồi kết quả",
+    details: [
+      "Nhận thông báo qua email",
+      "Cập nhật trạng thái ứng tuyển",
+      "Nhắc lịch phỏng vấn"
+    ],
   },
   {
     id: 3,
     icon: <MessageCircle className="w-8 h-8" />,
-    title: "Chat trực tiếp",
+    title: "Nhắn tin trực tiếp",
     description:
-      "Giao tiếp realtime với nhà tuyển dụng, thỏa thuận chi tiết công việc",
-    details: ["Chat realtime", "Chia sẻ file", "Thông báo push"],
+      "Trao đổi nhanh chóng với nhà tuyển dụng ngay trên nền tảng",
+    details: [
+      "Chat trực tiếp",
+      "Gửi CV nhanh chóng",
+      "Nhận thông báo tin nhắn mới"
+    ],
   },
   {
     id: 4,
     icon: <Star className="w-8 h-8" />,
-    title: "Đánh giá uy tín",
+    title: "Xây dựng uy tín cá nhân",
     description:
-      "Hệ thống đánh giá 2 chiều giúp xây dựng uy tín cho sinh viên và nhà tuyển dụng",
-    details: ["Đánh giá sao", "Bình luận chi tiết", "Badge uy tín"],
+      "Tạo hồ sơ đáng tin cậy thông qua đánh giá từ nhà tuyển dụng",
+    details: [
+      "Chấm điểm sao",
+      "Nhận nhận xét sau mỗi công việc",
+      "Tăng độ tin cậy hồ sơ"
+    ],
   },
 ];
+
 
 const features = [
   {
     icon: <ShieldCheck className="w-8 h-8 text-indigo-500" />,
     title: "Bảo mật cao",
-    description: "Xác minh CCCD, mã hóa dữ liệu, xác thực 2FA.",
+    description: "Xác minh CCCD, mã hóa dữ liệu, xác thực 2FA, token JWT an toàn.",
   },
   {
     icon: <Sparkles className="w-8 h-8 text-blue-500" />,
     title: "Gợi ý thông minh",
-    description: "AI matching dựa trên 10+ yếu tố để tìm việc phù hợp nhất.",
+    description: "Matching dựa trên 10+ yếu tố (kỹ năng, vị trí, lịch học, mức lương).",
   },
 ];
 

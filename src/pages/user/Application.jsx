@@ -20,6 +20,7 @@ import { createConversation } from "../../services/chatService";
 import { getJobDetailByIdForUser } from "../../services/jobService";
 import { formatWorkingDaysForDisplay } from "../../utils/scheduleUtils";
 import RatingModal from "../../components/User/RatingModal";
+import { showError, showSuccess, showWarning } from "../../utils/toast";
 
 export default function Application({ onViewDetail, onStartChat }) {
   const [applications, setApplications] = useState([]);
@@ -152,7 +153,7 @@ export default function Application({ onViewDetail, onStartChat }) {
       }
     } catch (error) {
       console.error("Lỗi khi tạo conversation:", error);
-      alert(error?.response?.data?.message || "Không thể tạo cuộc trò chuyện. Vui lòng thử lại.");
+      showWarning(error?.response?.data?.message || "Không thể tạo cuộc trò chuyện. Vui lòng thử lại.");
     }
   };
 
@@ -166,10 +167,10 @@ export default function Application({ onViewDetail, onStartChat }) {
       // Reload danh sách
       await loadApplications(pagination.currentPage, pagination.pageSize);
       setOpenMenuId(null);
-      alert("Đã hủy đơn ứng tuyển thành công");
+      showSuccess("Đã hủy đơn ứng tuyển thành công");
     } catch (error) {
       console.error("Lỗi khi hủy đơn ứng tuyển:", error);
-      alert(error?.response?.data?.message || "Không thể hủy đơn ứng tuyển. Vui lòng thử lại.");
+      showError(error?.response?.data?.message || "Không thể hủy đơn ứng tuyển. Vui lòng thử lại.");
     }
   };
 

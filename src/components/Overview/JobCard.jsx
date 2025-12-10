@@ -17,16 +17,6 @@ export default function JobCard({ job }) {
             <p className="text-gray-500 text-sm">{job.company}</p>
           </div>
         </div>
-
-        {job.isUrgent ? (
-          <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">
-            Gấp
-          </span>
-        ) : (
-          <span className="text-gray-400">
-            <i className="fa-regular fa-bookmark"></i>
-          </span>
-        )}
       </div>
 
       {/* Info */}
@@ -51,11 +41,10 @@ export default function JobCard({ job }) {
         {job.tags.map((tag, i) => (
           <span
             key={i}
-            className={`px-3 py-1 rounded-md text-xs border ${
-              tag === "Đã xác minh"
+            className={`px-3 py-1 rounded-md text-xs border ${tag === "Đã xác minh"
                 ? "bg-green-100 text-green-700 border-green-200"
                 : "bg-gray-50 text-gray-700 border-gray-200"
-            }`}
+              }`}
           >
             {tag}
           </span>

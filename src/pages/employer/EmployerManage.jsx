@@ -118,14 +118,14 @@ export default function EmployerManage({ onView, onEdit, onStartChat, onEditWith
   function handleEdit(id) {
     const job = jobs.find(j => j.id === id)
     if (!job) return
-    
+
     // Cho phép edit nếu status là PENDING_REVIEW, CLOSED, hoặc REJECTED
     const editableStatuses = ['PENDING_REVIEW', 'CLOSED', 'REJECTED']
     if (!editableStatuses.includes(job.status)) {
       setMessage({ type: 'error', text: 'Chỉ có thể chỉnh sửa tin đang chờ duyệt, đã đóng hoặc bị từ chối.' })
       return
     }
-    
+
     // Nếu có onEditWithStatus, truyền cả status
     if (onEditWithStatus) {
       onEditWithStatus(id, job.status)
@@ -284,8 +284,8 @@ export default function EmployerManage({ onView, onEdit, onStartChat, onEditWith
                       disabled={!['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status)}
                       className={`p-2 rounded ${!['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-50 text-blue-600'}`}
                       title={
-                        !['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status) 
-                          ? 'Chỉ có thể sửa tin đang chờ duyệt, đã đóng hoặc bị từ chối' 
+                        !['PENDING_REVIEW', 'CLOSED', 'REJECTED'].includes(job.status)
+                          ? 'Chỉ có thể sửa tin đang chờ duyệt, đã đóng hoặc bị từ chối'
                           : job.status === 'CLOSED' || job.status === 'REJECTED'
                             ? 'Chỉnh sửa và đăng lại'
                             : 'Sửa'

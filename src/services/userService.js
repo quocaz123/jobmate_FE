@@ -5,6 +5,10 @@ export const getUserInfo = async () => {
     return await httpClient.get(USER.GET_USER_INFO);
 }
 
+export const getUserStats = async () => {
+    return await httpClient.get(USER.GET_USER_STATS);
+}
+
 export const updateUserInfo = async (request) => {
     return await httpClient.put(USER.UPDATE_USER, request);
 }

@@ -7,6 +7,7 @@ import ReportsManagement from './ReportsManagement';
 import VerificationCCCD from '../../components/Admin/VerificationCCCD';
 import JobReviewManagement from '../../components/Admin/JobReviewManagement';
 import AuditLogs from '../../components/Admin/AuditLogs';
+import logoImg from '../../assets/logo.jpg';
 
 // Component cho Overview
 const AdminOverview = () => {
@@ -45,7 +46,7 @@ const AdminPage = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             menuItems={adminMenuItems}
-            logo="/vite.svg"
+            logo={logoImg}
             logoText="JobMate Admin"
         >
             {renderContent()}

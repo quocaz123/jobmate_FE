@@ -19,7 +19,7 @@ import ReviewsTab from "./ProfileTabs/ReviewsTab";
 import CareerInfoTab from "./ProfileTabs/CareerInfoTab";
 import LocationPickerModal from "../../components/common/LocationPickerModal";
 import { uploadFile } from "../../services/uploadFileService";
-import { getUserInfo, updateUserInfo, updateTwoFactorStatus, upgradeRole } from "../../services/userService";
+import { getUserInfo, getUserStats, updateUserInfo, updateTwoFactorStatus, upgradeRole } from "../../services/userService";
 import { logout } from "../../services/authService";
 import { removeToken } from "../../services/localStorageService";
 import { showSuccess, showError } from "../../utils/toast";
@@ -48,6 +48,38 @@ const normalizeCoord = (value) => {
   return Number.isNaN(num) ? null : num;
 };
 
+const getTrustBadge = (score) => {
+  const value = Number(score ?? 0);
+  if (!Number.isFinite(value) || value <= 0) {
+    return {
+      label: "Chưa xếp hạng",
+      className: "bg-gray-100 text-gray-600 border border-gray-200",
+    };
+  }
+  if (value >= 4.5) {
+    return {
+      label: "Hạng Gold",
+      className: "bg-yellow-100 text-yellow-700 border border-yellow-200",
+    };
+  }
+  if (value >= 3.5) {
+    return {
+      label: "Hạng Silver",
+      className: "bg-slate-100 text-slate-700 border border-slate-200",
+    };
+  }
+  if (value >= 2.5) {
+    return {
+      label: "Hạng Bronze",
+      className: "bg-amber-100 text-amber-700 border border-amber-200",
+    };
+  }
+  return {
+    label: "Chưa xếp hạng",
+    className: "bg-gray-100 text-gray-600 border border-gray-200",
+  };
+};
+
 const Profile = ({ onAvatarChange, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -59,6 +91,8 @@ const Profile = ({ onAvatarChange, onProfileUpdate }) => {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isUpgradeSubmitting, setIsUpgradeSubmitting] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [userStats, setUserStats] = useState(null);
+  const [userStatsLoading, setUserStatsLoading] = useState(false);
 
   const avatarChangeRef = useRef(onAvatarChange);
   const profileUpdateRef = useRef(onProfileUpdate);
@@ -122,6 +156,24 @@ const Profile = ({ onAvatarChange, onProfileUpdate }) => {
       setActiveTab("info");
     }
   }, [isEmployer, activeTab]);
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!profile || isEmployer) return;
+      try {
+        setUserStatsLoading(true);
+        const res = await getUserStats();
+        const data = res?.data?.data || res?.data || null;
+        setUserStats(data);
+      } catch (error) {
+        console.error("Không thể tải thống kê người dùng:", error);
+      } finally {
+        setUserStatsLoading(false);
+      }
+    };
+
+    fetchUserStats();
+  }, [profile, isEmployer]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -231,6 +283,7 @@ const Profile = ({ onAvatarChange, onProfileUpdate }) => {
     profile?.verificationMessage ||
     profile?.verificationRemark ||
     "";
+  const trustBadge = getTrustBadge(profile?.trustScore);
 
   const isProfileComplete = Boolean(
     profile?.fullName &&
@@ -449,15 +502,10 @@ const Profile = ({ onAvatarChange, onProfileUpdate }) => {
                 </span>
               )}
 
-              {profile.trustScore && profile.trustScore > 0 && (
-                <div className="flex items-center gap-1 text-sm">
-                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                  <span className="font-medium text-gray-800">
-                    {profile.trustScore.toFixed(1)}
-                  </span>
-                  <span className="text-gray-500 text-xs">
-                    ({profile.reviewCount || 0} đánh giá)
-                  </span>
+              {trustBadge && (
+                <div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${trustBadge.className}`}>
+                  <Star className="h-3 w-3" />
+                  <span className="font-medium">{trustBadge.label}</span>
                 </div>
               )}
             </div>
@@ -512,29 +560,64 @@ const Profile = ({ onAvatarChange, onProfileUpdate }) => {
           </div>
 
           {/* Thống kê */}
-          <div className="mt-6 border-t pt-4">
-            <h3 className="font-semibold text-gray-700 mb-3">Thống kê</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <ClipboardList size={16} /> Công việc hoàn thành
-                </span>
-                <span className="font-semibold text-gray-800">8</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Percent size={16} /> Tỷ lệ hoàn thành
-                </span>
-                <span className="font-semibold text-gray-800">96%</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Star size={16} /> Đánh giá trung bình
-                </span>
-                <span className="font-semibold text-gray-800">{profile.trustScore.toFixed(1)}/5.0</span>
-              </li>
-            </ul>
-          </div>
+          {!isEmployer && (
+            <div className="mt-6 border-t pt-4">
+              <h3 className="font-semibold text-gray-700 mb-3">Thống kê</h3>
+              {userStatsLoading ? (
+                <p className="text-sm text-gray-500">Đang tải thống kê...</p>
+              ) : (
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <ClipboardList size={16} /> Tổng lượt ứng tuyển
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {userStats?.totalApplications ?? 0}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle size={16} /> Công việc đã hoàn thành
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {userStats?.completedApplications ?? 0}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Percent size={16} /> Tỷ lệ hoàn thành
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {(() => {
+                        const rawRate = Number(userStats?.completionRate ?? 0);
+                        const percentValue = Number.isFinite(rawRate)
+                          ? (rawRate > 1 ? rawRate : rawRate * 100)
+                          : 0;
+                        return `${percentValue.toFixed(1)}%`;
+                      })()}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Star size={16} /> Đánh giá trung bình
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {Number(userStats?.averageRating ?? profile?.trustScore ?? 0).toFixed(1)} / 5.0
+                      {` (${userStats?.totalRatings ?? profile.reviewCount ?? 0} lượt)`}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Star size={16} /> Hạng uy tín
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {trustBadge?.label || "Chưa xếp hạng"}
+                    </span>
+                  </li>
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Cột phải */}

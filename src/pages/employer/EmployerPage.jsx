@@ -10,6 +10,7 @@ import MessagesPage from '../Common/MessagePage';
 import Profile from '../user/Profile';
 import { getUserInfo } from '../../services/userService';
 import PasswordSetupModal from '../../components/Common/PasswordSetupModal';
+import logoImg from '../../assets/logo.jpg';
 
 const EmployerPage = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -119,7 +120,7 @@ const EmployerPage = () => {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 menuItems={employerMenuItems}
-                logo="/vite.svg"
+                logo={logoImg}
                 logoText="JobMate Employer"
                 avatarUrl={avatarUrl}
             >
