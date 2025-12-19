@@ -206,6 +206,8 @@ export default function Dashboard({ onTabChange }) {
                 return "bg-green-100 text-green-700";
             case "REJECTED":
                 return "bg-red-100 text-red-700";
+            case "EXPIRED":
+                return "bg-gray-100 text-gray-600";
             case "PENDING":
             default:
                 return "bg-yellow-100 text-yellow-700";
@@ -218,6 +220,8 @@ export default function Dashboard({ onTabChange }) {
                 return "Đã chấp nhận";
             case "REJECTED":
                 return "Đã từ chối";
+            case "EXPIRED":
+                return "Đã hết hạn";
             case "PENDING":
             default:
                 return "Chờ phản hồi";
@@ -296,6 +300,7 @@ export default function Dashboard({ onTabChange }) {
                     <div className="space-y-4">
                         {invitations.map((invitation) => {
                             const isPending = invitation.status === "PENDING";
+                            const isExpired = invitation.status === "EXPIRED";
                             const acceptKey = `${invitation.id}-accept`;
                             const rejectKey = `${invitation.id}-reject`;
 
@@ -324,7 +329,7 @@ export default function Dashboard({ onTabChange }) {
                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getInvitationStatusStyle(invitation.status)}`}>
                                             {getInvitationStatusText(invitation.status)}
                                         </span>
-                                        {isPending && (
+                                        {isPending ? (
                                             <div className="flex gap-2">
                                                 <button
                                                     className="px-4 py-2 rounded-full border text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
@@ -341,7 +346,9 @@ export default function Dashboard({ onTabChange }) {
                                                     {actionLoading === acceptKey ? "Đang xử lý..." : "Chấp nhận"}
                                                 </button>
                                             </div>
-                                        )}
+                                        ) : isExpired ? (
+                                            <span className="text-xs text-gray-500">Lời mời đã hết hạn</span>
+                                        ) : null}
                                     </div>
                                 </div>
                             );

@@ -389,11 +389,30 @@ const FindCandidates = () => {
             showError("Vui lòng chọn tin tuyển dụng để gửi lời mời.");
             return;
         }
+
+        // Hậu đài đôi khi trả dữ liệu khác nhau giữa danh sách chờ và gợi ý,
+        // nên lấy candidateId/waitingListId theo nhiều trường, rỗng thì chặn lại.
+        const candidateId =
+            inviteModal.waitingList.userId ||
+            inviteModal.waitingList.candidateId ||
+            inviteModal.waitingList.id ||
+            inviteModal.waitingList.user?.id;
+        const waitingListId =
+            inviteModal.waitingList.waitingListId ||
+            inviteModal.waitingList.id ||
+            inviteModal.waitingList.candidateWaitingListId;
+
+        if (!candidateId) {
+            showError("Thiếu mã ứng viên, vui lòng thử lại hoặc tải lại trang.");
+            return;
+        }
+
         setSendingInvite(true);
         try {
             await sendInvitation({
-                candidateId: inviteModal.waitingList.userId,
-                waitingListId: inviteModal.waitingList.id,
+                candidateId,
+                // Một số nguồn (gợi ý) không có waitingListId, backend cần thì gửi, không thì bỏ qua.
+                ...(waitingListId ? { waitingListId } : {}),
                 jobId: selectedInviteJob,
                 message: inviteMessage || "Chúng tôi muốn mời bạn ứng tuyển job này!",
             });
@@ -531,9 +550,9 @@ const FindCandidates = () => {
                             </div>
                         ) : (
                             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                                {recommended.map((candidate) => (
+                                {recommended.map((candidate, idx) => (
                                     <RecommendationCard
-                                        key={candidate.id || candidate.userId}
+                                        key={`${candidate.userId || candidate.id || "cand"}-${idx}`}
                                         data={candidate}
                                         onInvite={(data) => handleOpenInvite(data, selectedJob)}
                                         onViewDetail={handleViewDetail}
