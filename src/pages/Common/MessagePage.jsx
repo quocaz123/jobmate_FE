@@ -9,6 +9,7 @@ import {
   searchConversations
 } from '../../services/chatService'
 import { getToken } from '../../services/localStorageService'
+import { showError } from '../../utils/toast'
 
 const getCurrentUserId = () => {
   try {
@@ -55,7 +56,7 @@ const ConversationList = ({ conversations, onSelectConversation, selectedConvers
         })
         setFilteredConversations(normalized)
       } catch (err) {
-        console.error("Error searching conversations:", err)
+        showError("Error searching conversations:", err)
       }
     }, 400)
     return () => clearTimeout(delay)
@@ -160,7 +161,7 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
         normalized.sort((a, b) => new Date(a.createdDate) - new Date(b.createdDate))
         setMessages(normalized)
       } catch (error) {
-        console.error("Error fetching messages:", error)
+        showError("Error fetching messages:", error)
       }
     }
     fetchMessages()
@@ -184,17 +185,10 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
             createdDate: message.createdDate || new Date().toISOString(),
           }
 
-          console.log("Message normalized:", {
-            id: normalized.id,
-            message: normalized.message,
-            me: normalized.me,
-            senderUserId: normalized.sender?.userId,
-            currentUserId: currentUserId
-          })
+          
 
           setMessages((prev) => {
             if (prev.some((m) => m.id === normalized.id)) {
-              console.log("Message đã tồn tại, bỏ qua:", normalized.id)
               return prev
             }
             return [...prev, normalized]
@@ -202,10 +196,10 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
           // cập nhật thứ tự hội thoại khi có tin mới
           onMessageSent(message.conversationId)
         } else {
-          console.log("Message không thuộc conversation hiện tại:", message.conversationId)
+          showError("Message không thuộc conversation hiện tại:", message.conversationId)
         }
       } catch (e) {
-        console.error("Error parsing socket message:", e, "Raw data:", data)
+        showError("Error parsing socket message:", e, "Raw data:", data)
       }
     }
 
@@ -216,7 +210,6 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
     return () => {
       socket.emit('leaveRoom', conversation.id)
       socket.off('message', handleMessage)
-      console.log(`Left room: ${conversation.id}`)
     }
   }, [conversation?.id, socket, onMessageSent])
 
@@ -267,7 +260,7 @@ const ChatWindow = ({ conversation, socket, onMessageSent }) => {
         onMessageSent(conversation.id)
       }
     } catch (err) {
-      console.error("Error sending message:", err)
+      showError("Error sending message:", err)
       setMessages((prev) => prev.filter((m) => m.id !== tempId))
       setNewMessage(messageText)
     }
@@ -377,11 +370,11 @@ const MessagesPage = () => {
   useEffect(() => {
     const token = getToken()
     if (!token) {
-      console.error("No token found, cannot connect to socket")
+      showError("No token found, cannot connect to socket")
       return
     }
 
-    const newSocket = io('http://localhost:8099', {
+    const newSocket = io(import.meta.env.VITE_SOCKET_IO_ENDPOINT, {
       transports: ['websocket'],
       query: { token: token },
       reconnection: true,
@@ -391,15 +384,15 @@ const MessagesPage = () => {
     })
 
     newSocket.on("connect", () => {
-      console.log(" Socket connected:", newSocket.id)
+      
     })
 
     newSocket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error)
+      showError("Socket connection error:", error)
     })
 
     newSocket.on("disconnect", (reason) => {
-      console.log("Socket disconnected:", reason)
+      
     })
 
     setSocket(newSocket)
@@ -407,7 +400,7 @@ const MessagesPage = () => {
     return () => {
       if (newSocket.connected) {
         newSocket.disconnect()
-        console.log("Socket disconnected on cleanup")
+        
       }
     }
   }, [])
@@ -431,7 +424,7 @@ const MessagesPage = () => {
         })
         setConversations(normalized)
       } catch (error) {
-        console.error("Error fetching conversations:", error)
+        showError("Error fetching conversations:", error)
       }
     }
     fetchConversations()

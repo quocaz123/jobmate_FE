@@ -1,6 +1,7 @@
 import httpClient from "../configurations/httpClient";
 import { USER } from "../configurations/configuration";
 import { getUserInfo } from "./userService";
+import { showError } from "../utils/toast";
 
 // API mới từ BE: getAutoLocation và updateLocation
 export const getAutoLocation = async () => {
@@ -14,7 +15,7 @@ export const getAutoLocation = async () => {
             address: data?.address,
         };
     } catch (err) {
-        console.error('Lỗi khi lấy vị trí tự động:', err);
+        showError('Lỗi khi lấy vị trí tự động:', err);
         return null;
     }
 };
@@ -24,7 +25,7 @@ export const updateLocation = async (request) => {
         const res = await httpClient.put(USER.UPDATE_USER, request);
         return res?.data?.data || res?.data;
     } catch (err) {
-        console.error('Lỗi khi cập nhật vị trí:', err);
+        showError('Lỗi khi cập nhật vị trí:', err);
         throw err;
     }
 };
@@ -34,15 +35,10 @@ export const initUserLocation = async () => {
     try {
         const meRes = await getUserInfo();
         const me = meRes?.data?.data || meRes?.data || {};
-
         const { address, latitude, longitude } = me;
-        console.log("address", address);
-        console.log("latitude", latitude);
-        console.log("longitude", longitude);
 
+        if (address && latitude && longitude) {
 
-        if(address && latitude && longitude) {
-            console.log("Người dùng đã có địa chỉ và tọa độ:", address);
             return { latitude, longitude, source: "profile" };
         }
 
@@ -62,7 +58,6 @@ export const initUserLocation = async () => {
 
             if (lat != null && lng != null) {
                 await updateLocation({ latitude: lat, longitude: lng });
-                console.log("Đã lưu vị trí GPS mới cho người dùng");
                 return { latitude: lat, longitude: lng, source: "gps" };
             }
             throw new Error("No coords from geolocation");
@@ -77,7 +72,6 @@ export const initUserLocation = async () => {
                         longitude: ipData.longitude,
                         address: ipData.city || ipData.address,
                     });
-                    console.log("Vị trí gần đúng qua IP:", ipData);
                     return {
                         latitude: ipData.latitude,
                         longitude: ipData.longitude,
@@ -86,12 +80,12 @@ export const initUserLocation = async () => {
                     };
                 }
             } catch (ipErr) {
-                console.error("Fallback qua IP thất bại:", ipErr?.message || ipErr);
+                showError("Fallback qua IP thất bại:", ipErr?.message || ipErr);
                 return null;
             }
         }
     } catch (err) {
-        console.error("initUserLocation lỗi:", err?.message || err);
+        showError("initUserLocation lỗi:", err?.message || err);
         return null;
     }
 };

@@ -8,5 +8,23 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: true
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          axios: ['axios'],
+        }
+      }
+    }
+  },
+  preview: {
+    port: 4173,
+    host: true
   }
 })

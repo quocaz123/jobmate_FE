@@ -8,16 +8,6 @@ import Footer from "../../components/Overview/Footer";
 
 export default function Overview() {
   const navigate = useNavigate();
-  const categories = [
-    "Gia sư",
-    "Phục vụ",
-    "Thiết kế",
-    "Marketing",
-    "Bán hàng",
-    "Dịch thuật",
-    "IT Support",
-    "Event",
-  ];
 
   const jobs = [
     {
