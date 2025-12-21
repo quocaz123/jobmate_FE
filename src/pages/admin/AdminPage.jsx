@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import DashboardLayout from '../../layouts/DashboardLayout.jsx';
-import { adminMenuItems } from '../../utils/menuConfig.js';
-import AdminDashboard from '../../components/Admin/AdminDashboard.jsx';
-import UsersManagement from '../../components/Admin/UsersManagement.jsx';
-import ReportsManagement from './ReportsManagement.jsx';
-import VerificationCCCD from '../../components/Admin/VerificationCCCD.jsx';
-import JobReviewManagement from '../../components/Admin/JobReviewManagement.jsx';
-import AuditLogs from '../../components/Admin/AuditLogs.jsx';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { adminMenuItems } from '../../utils/menuConfig';
+import AdminDashboard from '../../components/Admin/AdminDashboard';
+import UsersManagement from '../../components/Admin/UsersManagement';
+import ReportsManagement from './ReportsManagement';
+import VerificationCCCD from '../../components/Admin/VerificationCCCD';
+import JobReviewManagement from '../../components/Admin/JobReviewManagement';
+import AuditLogs from '../../components/Admin/AuditLogs';
 import logoImg from '../../assets/logo.jpg';
 
 // Component cho Overview
