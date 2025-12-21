@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Common/Sidebar';
+import SideBar from '../components/Common/SideBar';
 import TopBar from '../components/Common/TopBar';
 import { getUserInfo } from '../utils/userUtils';
 import { getMenuItemsByRole } from '../utils/menuConfig';
@@ -69,7 +69,7 @@ const DashboardLayout = ({
 
     return (
         <div className="h-screen bg-gray-50 flex overflow-hidden">
-            <Sidebar
+            <SideBar
                 sidebarItems={internalMenuItems}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
